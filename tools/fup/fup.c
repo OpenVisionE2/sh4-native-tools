@@ -57,7 +57,6 @@
 #include <zlib.h>
 
 #include "crc16.h"
-#include "crc32.h"
 #include "dummy30.h"
 #include "dummy31.h"
 
