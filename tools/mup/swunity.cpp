@@ -300,7 +300,7 @@ void SwUnity::extract()
 			vHelpStr[i] = '_';
 		}
 	}
-	fd = open(vHelpStr, O_WRONLY | O_CREAT);
+	fd = open(vHelpStr, O_WRONLY | O_CREAT,S_IRUSR|S_IWUSR));
 	if (fd < 0)
 	{
 		printf("error opening %s\n", vHelpStr);
