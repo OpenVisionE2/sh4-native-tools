@@ -327,12 +327,6 @@ AC_ARG_WITH(boxtype,
 	[BOXTYPE="$withval"],[BOXTYPE="spark"])
 AC_SUBST(BOXTYPE)
 AC_DEFINE_UNQUOTED(BOXTYPE,"$BOXTYPE",[box type])
-
-if test "$BOXTYPE" = "spark"; then
-	AC_DEFINE(HAVE_SPARK_HARDWARE, 1, [building for spark])
-elif test "$BOXTYPE" = "spark7162"; then
-	AC_DEFINE(HAVE_SPARK7162_HARDWARE, 1, [building for spark7162])
-fi
 ])
 
 AC_DEFUN([TUXBOX_BOXBRAND],[
