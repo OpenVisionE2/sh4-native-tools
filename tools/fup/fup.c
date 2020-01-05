@@ -11,9 +11,12 @@
  * + TODO: use correct mtd numbers and partition names on extract
  *   depending on resellerID.
  *
+ * Changes in Version 1.9.1:
+ * + -d and -dv options added: create dimmy squashfs file.
+ *
  * Changes in Version 1.9.0:
  * + dummy squash header file is only created when needed.
- * + -rv show old resellerID also.
+ * + -rv shows old resellerID also.
  *
  * Changes in Version 1.8.3b:
  * + More rigid argument checking with -c and -ce; missing filenames for
@@ -60,8 +63,8 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.0"
-#define DATE "15.12.2019"
+#define VERSION "1.9.1"
+#define DATE "04.01.2020"
 
 //#define USE_ZLIB
 
@@ -522,7 +525,7 @@ int32_t readBlock(FILE* file, const char * name, uint8_t firstBlock)
 	return len;
 }
 
-void create_dummy()
+void create_dummy(void)
 {
 // Check if the file dummy.squash.signed.padded exists. If not, create it
 	file = fopen("dummy.squash.signed.padded", "rb");
@@ -542,15 +545,19 @@ void create_dummy()
 		file = fopen("dummy.squash.signed.padded", "rb");
 		printverbose(".");
 
-		if (file != NULL && verbose == 1)
+		if (file != NULL)
 		{
-			printf("\n\nCreating signed dummy squashfs header file successfully completed.\n");
+			printverbose("\n\nCreating signed dummy squashfs header file successfully completed.\n");
 		}
 		else
 		{
-			printf("\nCould not write signed dummy squashfs header file.\n");
+			printf("\nError: Could not write signed dummy squashfs header file.\n");
 			remove("dummy.squash.signed.padded");
 		}
+	}
+	else
+	{
+		printverbose("Signed dummy squashfs headerfile already exists, doning nothing\n");
 	}
 }
 
@@ -559,10 +566,22 @@ int32_t main(int32_t argc, char* argv[])
 	pos = 0;
 	firstBlock = 1;
 
-	if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-s", 2) == 0)
-	|| (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-sv", 3) == 0))  // sign squashfs part
+	if ((argc == 2 && strlen(argv[1]) == 2 && strncmp(argv[1], "-d", 2) == 0)
+	|| (argc == 2 && strlen(argv[1]) == 3 && strncmp(argv[1], "-dv", 3) == 0))  // force create dummy
 	{
-
+		if (strncmp(argv[1], "-dv", 3) == 0)
+		{
+			verbose = 1;
+		}
+		else
+		{
+			verbose = 0;
+		}
+		create_dummy();
+	}
+	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-s", 2) == 0)
+	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-sv", 3) == 0))  // sign squashfs part
+	{
 		if (strncmp(argv[1], "-sv", 3) == 0)
 		{
 			verbose = 1;
@@ -609,7 +628,7 @@ int32_t main(int32_t argc, char* argv[])
 		fclose(signedFile);
 	}
 	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-t", 2) == 0)
-			|| (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-tv", 3) == 0))  // test signed squashfs part
+	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-tv", 3) == 0))  // test signed squashfs part
 	{
 
 		if (strncmp(argv[1], "-tv", 3) == 0)
@@ -657,7 +676,7 @@ int32_t main(int32_t argc, char* argv[])
 		fclose(file);
 	}
 	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-x", 2) == 0)
-			|| (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-xv", 3) == 0))  //extract IRD into composing parts
+	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-xv", 3) == 0))  //extract IRD into composing parts
 	{
 		if (strncmp(argv[1], "-xv", 3) == 0)
 		{
@@ -1006,7 +1025,7 @@ int32_t main(int32_t argc, char* argv[])
 				{
 					printf("\nNew partition, type %02X\n", type);
 				}
-//				printf("\ntype = %02X, appendPartcount = %d, argc = %d, i = %d, argv[%d] = [%s]\n",type,appendPartCount,argc,i,i,argv[i]);
+//				printf("\ntype = %02X, appendPartcount = %d, argc = %d, i = %d, argv[%d] = [%s ]\n",type,appendPartCount,argc,i,i,argv[i]);
 
 				if (((appendPartCount) % 2 == 1) && (argc==i+1))
 				{
@@ -1225,7 +1244,7 @@ int32_t main(int32_t argc, char* argv[])
 		fclose(irdFile);
 	}
 	else if ((argc == 4 && strlen(argv[1]) == 2 && strncmp(argv[1], "-n", 2) == 0)
-		|| (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-nv", 3) == 0))  // Change SW version number
+	     ||  (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-nv", 3) == 0))  // Change SW version number
 	{
 		if (strncmp(argv[1], "-nv", 3) == 0)
 		{
@@ -1300,7 +1319,7 @@ int32_t main(int32_t argc, char* argv[])
 		printf("\n");
 		printf("Version: %s Date: %s\nUse ZLIB: %s\n", VERSION, DATE, zlibt);
 		printf("\n");
-		printf("Usage: %s -xcstrnv []\n", argv[0]);
+		printf("Usage: %s -xcsdtrnv []\n", argv[0]);
 		printf("       -x [update.ird]            Extract IRD\n");
 		printf("       -xv [update.ird]           As -x, verbose\n");
 		printf("       -c [update.ird] Options    Create Fortis IRD\n");
@@ -1320,8 +1339,8 @@ int32_t main(int32_t argc, char* argv[])
 		printf("          ...\n");
 		printf("          -9  [file.part]          Append Type 9   (9) (alias for -u)\n");
 		printf("          -v                       Verbose operation\n");
-		printf("       -ce [update.ird] Options   Create Enigma2 IRD\n");
-		printf("         Options for -ce:                              HS8200 L6.00 memory layout\n");
+		printf("       -ce [update.ird] Options   Create Enigma2 IRD (obsolete, 1G models with TDT Maxiboot only\n");
+		printf("         Options for -ce:\n");
 		printf("          -k|-6 [file.part]        Append Kernel   (6) -> mtd1\n");
 		printf("          -f|-1 [file.part]        Append FW       (1)\n");
 		printf("          -r|-9 [file.part]        Append Root     (9)\n");
@@ -1335,6 +1354,8 @@ int32_t main(int32_t argc, char* argv[])
 		printf("          -v                       Verbose operation\n");
 		printf("       -s [unsigned.squashfs]     Sign squashfs part\n");
 		printf("       -sv [unsigned.squashfs]    Sign squashfs part, verbose\n");
+		printf("       -d                         Create squasfs dummy file\n");
+		printf("       -dv                        As -d, verbose\n");
 		printf("       -t [signed.squashfs]       Test signed squashfs part\n");
 		printf("       -tv [signed.squashfs]      Test signed squashfs part, verbose\n");
 		printf("       -r [update.ird] id         Change reseller id (e.g. 230300A0 for Atevio AV7500 L6.00)\n");
