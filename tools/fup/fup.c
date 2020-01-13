@@ -3,7 +3,7 @@
 /*                                                                        */
 /* Author:  Schischu, enhanced by Audioniek                               */
 /*                                                                        */
-/* Licence: This file is subject to the terms and conditions of the       */
+/* License: This file is subject to the terms and conditions of the       */
 /*          GNU General Public License version 2.                         */
 /**************************************************************************/
 /*
@@ -12,7 +12,7 @@
  *   depending on resellerID.
  *
  * Changes in Version 1.9.1:
- * + -d and -dv options added: create dimmy squashfs file.
+ * + -d and -dv options added: create dummy squashfs file.
  *
  * Changes in Version 1.9.0:
  * + dummy squash header file is only created when needed.
@@ -557,7 +557,7 @@ void create_dummy(void)
 	}
 	else
 	{
-		printverbose("Signed dummy squashfs headerfile already exists, doning nothing\n");
+		printverbose("Signed dummy squashfs headerfile already exists, doing nothing\n");
 	}
 }
 
@@ -1354,7 +1354,7 @@ int32_t main(int32_t argc, char* argv[])
 		printf("          -v                       Verbose operation\n");
 		printf("       -s [unsigned.squashfs]     Sign squashfs part\n");
 		printf("       -sv [unsigned.squashfs]    Sign squashfs part, verbose\n");
-		printf("       -d                         Create squasfs dummy file\n");
+		printf("       -d                         Create squashfs dummy file\n");
 		printf("       -dv                        As -d, verbose\n");
 		printf("       -t [signed.squashfs]       Test signed squashfs part\n");
 		printf("       -tv [signed.squashfs]      Test signed squashfs part, verbose\n");
