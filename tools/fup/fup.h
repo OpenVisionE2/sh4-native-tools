@@ -1,14 +1,14 @@
 #ifndef __FUP_H__
 #define __FUP_H__
 
-#define MAX_PART_NUMBER 0x0a    // highest possible partition number
-#define EXTENSION_LEN   32      // maximum length of partition extension
+#define MAX_PART_NUMBER  0x0a    // highest possible partition number
+#define EXTENSION_LEN    32      // maximum length of partition extension
 
-#define PART_SIGN       1       // partition must be signed
-#define PART_FLASH      2       // partition is flashable
+#define PART_SIGN        1       // partition must be signed
+#define PART_FLASH       2       // partition is flashable
 
-#define DATA_BUFFER     0x2000
-#define DATA_BLOCKSIZE  0x7FFA  // default block size (0x8000 - compressed length - block CRC16 - partition type)
+#define DATA_BUFFER_SIZE 0x2000
+#define DATA_BLOCK_SIZE  0x7FFA  // default block size (0x8000 - compressed length - block CRC16 - partition type)
 
 /************************************************************
  *
@@ -84,7 +84,6 @@ struct tPartition partData2c[] =
 	{ ".config4", "mtd5", "Config4", 0x001b40000, 0x00040000, "binary", (PART_FLASH) },
 	{ ".config8", "mtd5", "Config8", 0x001b80000, 0x00020000, "binary", (PART_FLASH) },
 	{ ".configA", "mtd5", "ConfigA", 0x001ba0000, 0x00020000, "binary", (PART_FLASH) },
-//	{ ".configC", "mtd5", "ConfigC", 0x001bc0000, 0x00040000, "binary", 0 },
 	{  ".kernel", "mtd1",  "Kernel", 0x000060000, 0x0000007f, "binary", (PART_FLASH) },
 	{     ".dev", "mtd4",     "Dev", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{  ".rootfs", "mtd3",    "Root", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
@@ -100,7 +99,6 @@ struct tPartition partData2d[] =
 	{ ".config4", "mtd5", "Config4", 0x002140000, 0x00040000, "binary", (PART_FLASH) },
 	{ ".config8", "mtd5", "Config8", 0x002180000, 0x00020000, "binary", (PART_FLASH) },
 	{ ".configA", "mtd5", "ConfigA", 0x0021a0000, 0x00020000, "binary", (PART_FLASH) },
-//	{ ".configC", "mtd5", "ConfigC", 0x0021c0000, 0x00040000, "binary", 0 },
 	{  ".kernel", "mtd1",  "Kernel", 0x000600000, 0x0000007f, "binary", (PART_FLASH) },
 	{     ".dev", "mtd4",     "Dev", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{  ".rootfs", "mtd3",    "Root", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
@@ -142,16 +140,16 @@ struct tPartition partData4[] =
  * Simple table defining resellerID <-> reseller name
  *
  * Note: generation 2 has an A in digit 7, but is also
- *       checked for zero.
+ *       checked for zero in this digit.
  *
- * (Almost certainly not complete).
+ * (This table is almost certainly not complete).
  *
  */
 struct model_name
 {
 	uint32_t resellerID;
 	const char *reseller_name;
-} fortis_names[] =
+} fortisNames[] =
 {
 	{ 0x20000000, "Fortis FS-9000 HD PVR" },
 	{ 0x20000100, "Fortis FS-9200 HD PVR" },
@@ -174,8 +172,8 @@ struct model_name
 	{ 0x20070000, "Tiviar F1 HD PVR" },
 	{ 0x20070100, "Tiviar T1 HD PVR" },
 	{ 0x20070300, "Tiviar S1 eco HD PVR" },
-	{ 0x20080000, "Icecrypt S4000 HD PVR" },
-	{ 0x20090000, "Atevio AV 7000 HD" },
+	{ 0x20080000, "Icecrypt S4000HDPVR" },
+	{ 0x20090000, "Atevio AV 7000 HD PVR" },
 	{ 0x20090300, "Atevio AV 700 HD" },
 	{ 0x20110100, "Astro ASR 1200 Twin HD" },
 	{ 0x20110300, "Astro ASR 1100 Single HD" },
@@ -213,8 +211,8 @@ struct model_name
 	{ 0x22050001, "Icecrypt S1500 C" },
 	{ 0x230000A0, "Fortis HX-8200 HD PVR" },
 	{ 0x230100A0, "Rebox RE-8500HD PVR" },
-	{ 0x230200A0, "Octagon SF 1028P Noblence" },
-	{ 0x230300A0, "Atevio AV 7500 HD PVR" },
+	{ 0x230200A0, "Octagon SF 1028P HD Noblence" },
+	{ 0x230300A0, "Atevio AV7500 HD PVR" },
 	{ 0x230400A0, "Skyway Droid" },
 	{ 0x230500A0, "Openbox S9 HD PVR" },
 	{ 0x230600A0, "Icecrypt STC6000 HD PVR" },
@@ -282,7 +280,7 @@ struct model_name
 	{ 0x252607A0, "Miraclebox 7 HD PVR" },
 	{ 0x252700A0, "Mediastar (Powers) HD 900s" },
 	{ 0x252802A0, "Vegasat X1" },
-	{ 0x252902A0, "Atemio AM 500 HD, AM 510 HD" },
+	{ 0x252902A0, "Atemio AM 500/510 HD" },
 	{ 0x253000A0, "KIOWA HD 98" },
 	{ 0x253003A0, "KIOWA HD 108" },
 	{ 0x253513A0, "Starsat 9900 HD" },
@@ -331,7 +329,7 @@ struct model_name
 	{ 0x273120A0, "Opticum Actus Solo" },
 	{ 0x29000000, "Fortis DS220" },
 	{ 0x29010000, "XCruiser XDSR385HD Avant" },
-	{ 0x29020000, "Visionnet Hawk" },
+	{ 0x29020000, "VisionNet Hawk" },
 	{ 0x29030000, "Openbox SX4 HD" },
 	{ 0x29040000, "Skyway Nano 3" },
 	{ 0x29050000, "SuperBox Elite 4+" },
@@ -353,7 +351,7 @@ struct model_name
 	{ 0x29090300, "Forever HD 3434 PVR Cardiff" },
 	{ 0x29120300, "Drake 7500HD-V3" },
 	{ 0x29011000, "XCruiser XDSR2600HD Avant" },
-	{ 0x29021000, "Visionnet Nova" },
+	{ 0x29021000, "VisionNet Nova" },
 	{ 0x29031000, "Openbox SX4 Base" },
 	{ 0x29041000, "Skyway Light 2" },
 	{ 0x29051000, "SuperBox Elite TV" },
@@ -361,16 +359,17 @@ struct model_name
 	{ 0x29131000, "HD Box 3500 plus" },
 	{ 0x29141000, "Star Track SRT 2014 HD Premium" },
 	{ 0x29171000, "Dynavision DV6000HDPVR" },
+	{ 0x29042000, "Skyway Droid 2" },
+	{ 0x29032000, "Openbox SX9 HD Combo" },
 	{ 0x2A000000, "Fortis ESS300" },
 	{ 0x2A020000, "Rebox RE-8220HD S-PVR" },
 	{ 0x2A040000, "Openbox SX9 HD" },
-	{ 0x2A050000, "Icecrypt S6600HD PVR" },
+	{ 0x2A050000, "Icecrypt S6600HDPVR" },
 	{ 0x2A010100, "XCruiser XDSR420HD Avant" },
 	{ 0x2A010101, "XCruiser XDSR400HD Avant" },
-	{ 0x2A030101, "Proween STI-820HD Grand" },
-	{ 0x29042000, "Skyway Droid 2" },
-	{ 0x29032000, "Openbox SX9 HD Combo" }
+	{ 0x2A030101, "Proween STI-820HD Grand" }
 };
 
 #endif /* __FUP_H__ */
 // vim:ts=4
+
