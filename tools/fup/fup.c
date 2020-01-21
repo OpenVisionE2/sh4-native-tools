@@ -84,7 +84,7 @@
 #define VERSION "1.9.6"
 #define DATE "14.01.2020"
 
-#define USE_ZLIB
+//#define USE_ZLIB
 
 uint8_t verbose = 1;
 char printstring;
