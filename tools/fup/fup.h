@@ -1,14 +1,25 @@
 #ifndef __FUP_H__
 #define __FUP_H__
 
-#define MAX_PART_NUMBER  0x0a    // highest possible partition number
+#define MAX_PART_NUMBER  0x0a    // highest possible partition number (loader defines 0x10, with 0x0a-0x0f unused)
 #define EXTENSION_LEN    32      // maximum length of partition extension
 
 #define PART_SIGN        1       // partition must be signed
 #define PART_FLASH       2       // partition is flashable
 
+#define USE_ZLIB         1       // do not undefine; HD models do not handle uncompressed format  
+
+#if defined(USE_ZLIB)
+#define VER_Xfd          0x0010
+#else
+#define VER_Xfd          0x0001
+#endif
+
 #define DATA_BUFFER_SIZE 0x2000
-#define DATA_BLOCK_SIZE  0x7FFA  // default block size (0x8000 - compressed length - block CRC16 - partition type)
+#define DATA_BLOCK_SIZE  0x8000 - 6  // default block size (0x8000 - compressed length - block CRC16 - partition type)
+
+/* Default reseller ID */
+#define RESELLER_ID      0x230200a0  // Octagon SF 1028P HD Noblence L6.00
 
 /************************************************************
  *
@@ -31,8 +42,7 @@ struct tPartition
 };
 
 struct tPartition partData1[] =
-{
-	// 32MB flash (1st generation models, FS9000, FS9200, HS9510)
+{  // 32MB flash (1st generation models, FS9000, FS9200, HS9510)
 	{  ".loader", "mtd0",  "Loader", 0x00000000, 0x00300000, "binary", (PART_FLASH) },
 	{     ".app", "mtd2",     "App", 0x00b00000, 0x00500000, "squash", (PART_FLASH | PART_SIGN) },
 	{ ".config0", "mtd5", "Config0", 0x01b00000, 0x00040000, "binary", (PART_FLASH) },
@@ -46,8 +56,7 @@ struct tPartition partData1[] =
 };
 
 struct tPartition partData2a[] =
-{
-	// 32MB flash (2nd generation models, HS7110, HS7420, HS7810A, loader 5.XX)
+{  // 32MB flash (2nd generation models, HS7110, HS7420, HS7810A, loader 5.XX)
 	{  ".loader", "mtd0",  "Loader", 0x00000000, 0x00100000, "binary", (PART_FLASH) },
 	{     ".app", "mtd2",     "App", 0x00b00000, 0x00500000, "squash", (PART_FLASH | PART_SIGN) },
 	{ ".config0", "mtd5", "Config0", 0x01b00000, 0x00040000, "binary", (PART_FLASH) },
@@ -61,8 +70,7 @@ struct tPartition partData2a[] =
 };
 
 struct tPartition partData2b[] =
-{
-	// 64MB flash (HS8200, loader 5.0X)
+{  // 64MB flash (HS8200, loader 5.0X)
 	{  ".loader", "mtd0",  "Loader", 0x000000000, 0x00100000, "binary", (PART_FLASH) },
 	{     ".app", "mtd2",     "App", 0x000b00000, 0x00700000, "squash", (PART_FLASH | PART_SIGN) },
 	{ ".config0", "mtd5", "Config0", 0x002100000, 0x00040000, "binary", (PART_FLASH) },
@@ -76,14 +84,13 @@ struct tPartition partData2b[] =
 };
 
 struct tPartition partData2c[] =
-	{
-	// 32MB flash (2nd generation models, HS7110, HS7810A, HS7810, loader 6.XX)
+{  // 32MB flash (2nd generation models, HS7110, HS7810A, HS7810, loader 6.XX)
 	{  ".loader", "mtd0",  "Loader", 0x000000000, 0x00030000, "binary", (PART_FLASH) },
 	{     ".app", "mtd2",     "App", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
-	{ ".config0", "mtd5", "Config0", 0x001b00000, 0x00040000, "binary", (PART_FLASH) },
-	{ ".config4", "mtd5", "Config4", 0x001b40000, 0x00040000, "binary", (PART_FLASH) },
-	{ ".config8", "mtd5", "Config8", 0x001b80000, 0x00020000, "binary", (PART_FLASH) },
-	{ ".configA", "mtd5", "ConfigA", 0x001ba0000, 0x00020000, "binary", (PART_FLASH) },
+	{ ".config0", "mtd5", "Config0", 0x001b00000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".config4", "mtd5", "Config4", 0x001b40000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".config8", "mtd5", "Config8", 0x001b80000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".configA", "mtd5", "ConfigA", 0x001ba0000, 0x0000007f, "binary", (PART_FLASH) },
 	{  ".kernel", "mtd1",  "Kernel", 0x000060000, 0x0000007f, "binary", (PART_FLASH) },
 	{     ".dev", "mtd4",     "Dev", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{  ".rootfs", "mtd3",    "Root", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
@@ -91,14 +98,13 @@ struct tPartition partData2c[] =
 };
 
 struct tPartition partData2d[] =
-{
-	// 64MB flash (HS8200, loader 6.00)
+{  // 64MB flash (HS8200, loader 6.00)
 	{  ".loader", "mtd0",  "Loader", 0x000000000, 0x00060000, "binary", (PART_FLASH) },
 	{     ".app", "mtd2",     "App", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
-	{ ".config0", "mtd5", "Config0", 0x002100000, 0x00040000, "binary", (PART_FLASH) },
-	{ ".config4", "mtd5", "Config4", 0x002140000, 0x00040000, "binary", (PART_FLASH) },
-	{ ".config8", "mtd5", "Config8", 0x002180000, 0x00020000, "binary", (PART_FLASH) },
-	{ ".configA", "mtd5", "ConfigA", 0x0021a0000, 0x00020000, "binary", (PART_FLASH) },
+	{ ".config0", "mtd5", "Config0", 0x002100000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".config4", "mtd5", "Config4", 0x002140000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".config8", "mtd5", "Config8", 0x002180000, 0x0000007f, "binary", (PART_FLASH) },
+	{ ".configA", "mtd5", "ConfigA", 0x0021a0000, 0x0000007f, "binary", (PART_FLASH) },
 	{  ".kernel", "mtd1",  "Kernel", 0x000600000, 0x0000007f, "binary", (PART_FLASH) },
 	{     ".dev", "mtd4",     "Dev", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{  ".rootfs", "mtd3",    "Root", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
@@ -106,14 +112,13 @@ struct tPartition partData2d[] =
 };
 
 struct tPartition partData3[] =
-	{
-	// 256MB flash (third generation, HS7119, HS7429, HS7819, loader 7.X0, 7.X6 or 7.X7)
+{  // 256MB flash (third generation, HS7119, HS7429, HS7819, loader 7.X0, 7.X6 or 7.X7)
 	{  ".loader",   "mtd0",  "Loader", 0x00000000, 0x00400000, "binary", (PART_FLASH) },
 	{  ".rootfs",   "mtd2",  "Rootfs", 0x00800000, 0x06000000, "UBI"   , (PART_FLASH) },
-	{ ".config0",   "mtd5", "Config0", 0x00400000, 0x00040000, "binary", (PART_FLASH) }, // not writeable by IRD?
-	{ ".config4",   "mtd5", "Config4", 0x00440000, 0x00040000, "binary", (PART_FLASH) }, // not writeable by IRD?
-	{ ".config8",   "mtd5", "Config8", 0x00480000, 0x00020000, "binary", (PART_FLASH) }, // not writeable by IRD?
-	{ ".configA",   "mtd5", "ConfigA", 0x004A0000, 0x00020000, "binary", (PART_FLASH) }, // not writeable by IRD?
+	{ ".config0",   "mtd5", "Config0", 0x00400000, 0x00040000, "binary", (PART_FLASH) },  // not writeable by IRD?
+	{ ".config4",   "mtd5", "Config4", 0x00440000, 0x00040000, "binary", (PART_FLASH) },  // not writeable by IRD?
+	{ ".config8",   "mtd5", "Config8", 0x00480000, 0x00020000, "binary", (PART_FLASH) },  // not writeable by IRD?
+	{ ".configA",   "mtd5", "ConfigA", 0x004a0000, 0x00020000, "binary", (PART_FLASH) },  // not writeable by IRD?
 	{  ".kernel",   "mtd1",  "Kernel", 0x00500000, 0x00300000, "binary", (PART_FLASH) },
 	{  ".part.7", "Unused",  "Unused", 0x00000000, 0x00100000, "binary", 0 }, // not writeable by IRD
 	{  ".part.8", "Unused",  "Unused", 0x00000000, 0x00000000, "binary", 0 }, // not writeable by IRD
@@ -121,23 +126,36 @@ struct tPartition partData3[] =
 };
 
 struct tPartition partData4[] =
-{
-	// 256MB flash (fourth generation, DP2010, Dp6010, DP7000, DP7001..., loader 8.X4, 8.X6 or 8.X7) # to be checked
+{  // 256MB flash (fourth generation except 7050, loader 8.X4, 8.X6, 8.X7 or X.0X) # to be checked
 	{ ".loader", "mtd0", "Loader", 0x00000000, 0x00100000, "binary", (PART_FLASH) },
 	{ ".rootfs", "mtd2",   "Root", 0x00800000, 0x0b600000, "UBI"   , (PART_FLASH) },
-	{ ".config", "mtd5", "Config", 0x08000000, 0x00100000, "binary", 0 }, // not writeable by IRD
-	{ ".config", "mtd5", "Config", 0x08000000, 0x00100000, "binary", 0 }, // not writeable by IRD
-	{ ".config", "mtd5", "Config", 0x08000000, 0x00100000, "binary", 0 }, // not writeable by IRD
-	{ ".config", "mtd5", "Config", 0x08000000, 0x00100000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x0fe00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x0fe00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x0fe00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x0fe00000, 0x00200000, "binary", 0 }, // not writeable by IRD
 	{ ".kernel", "mtd1", "Kernel", 0x00400000, 0x00400000, "binary", (PART_FLASH) },
 	{ ".eeprom", "mtd4", "EEPROM", 0x00380000, 0x00080000, "binary", 0 }, // not writeable by IRD
-	{   ".user", "mtd6",   "User", 0x00000000, 0x00000000, "binary", 0 }, // not writeable by IRD
+	{   ".user", "mtd6",   "User", 0x0be00000, 0x04000000, "binary", 0 }, // not writeable by IRD
+	{   ".logo", "mtd3",   "Logo", 0x00180000, 0x00200000, "binary", (PART_FLASH) }
+};
+
+struct tPartition partData4a[] =
+{  // 128MB flash (fourth generation, DP7050, loader 8.24, 8.26, 8.27 or 3.0X) # to be checked
+	{ ".loader", "mtd0", "Loader", 0x00000000, 0x00100000, "binary", (PART_FLASH) },
+	{ ".rootfs", "mtd2",   "Root", 0x00800000, 0x06200000, "UBI"   , (PART_FLASH) },
+	{ ".config", "mtd5", "Config", 0x07e00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x07e00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x07e00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".config", "mtd5", "Config", 0x07e00000, 0x00200000, "binary", 0 }, // not writeable by IRD
+	{ ".kernel", "mtd1", "Kernel", 0x00400000, 0x00400000, "binary", (PART_FLASH) },
+	{ ".eeprom", "mtd4", "EEPROM", 0x00380000, 0x00080000, "binary", 0 }, // not writeable by IRD
+	{   ".user", "mtd6",   "User", 0x06a00000, 0x01400000, "binary", 0 }, // not writeable by IRD
 	{   ".logo", "mtd3",   "Logo", 0x00180000, 0x00200000, "binary", (PART_FLASH) }
 };
 
 /************************************************************
  *
- * Simple table defining resellerID <-> reseller name
+ * Simple table defining resellerID -> reseller name
  *
  * Note: generation 2 has an A in digit 7, but is also
  *       checked for zero in this digit.
@@ -335,7 +353,7 @@ struct model_name
 	{ 0x29050000, "SuperBox Elite 4+" },
 	{ 0x29060000, "Rebox RE-2220HD S-PVR" },
 	{ 0x29080000, "Dreamsky HD4X" },
-	{ 0x29090000, "Forever HD Nano Smart PVR Cardiff" },
+	{ 0x29090000, "Forever HD Nano Smart Cardiff" },
 	{ 0x29120000, "Drake 7500HD Mini" },
 	{ 0x29130000, "HD Box 4500 plus" },
 	{ 0x29140000, "Star Track Grand HD" },
@@ -359,8 +377,8 @@ struct model_name
 	{ 0x29131000, "HD Box 3500 plus" },
 	{ 0x29141000, "Star Track SRT 2014 HD Premium" },
 	{ 0x29171000, "Dynavision DV6000HDPVR" },
-	{ 0x29042000, "Skyway Droid 2" },
 	{ 0x29032000, "Openbox SX9 HD Combo" },
+	{ 0x29042000, "Skyway Droid 2" },
 	{ 0x2A000000, "Fortis ESS300" },
 	{ 0x2A020000, "Rebox RE-8220HD S-PVR" },
 	{ 0x2A040000, "Openbox SX9 HD" },
@@ -372,4 +390,3 @@ struct model_name
 
 #endif /* __FUP_H__ */
 // vim:ts=4
-
