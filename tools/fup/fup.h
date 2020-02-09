@@ -17,9 +17,14 @@
 
 #define DATA_BUFFER_SIZE 0x2000
 #define DATA_BLOCK_SIZE  0x8000 - 6  // default block size (0x8000 - compressed length - block CRC16 - partition type)
+#define ERASE_SIZE       0x20000     // for 2nd generation with loader 6.XX
 
 /* Default reseller ID */
 #define RESELLER_ID      0x230200a0  // Octagon SF 1028P HD Noblence L6.00
+
+#define RESELLER_OFFSET_GEN1  0x00f0
+#define RESELLER_OFFSET_GEN2  0x0430
+#define RESELLER_OFFSET_GEN4  0x0500
 
 /************************************************************
  *
@@ -63,10 +68,10 @@ struct tPartition partData2a[] =
 	{ ".config4", "mtd5", "Config4", 0x01b40000, 0x00040000, "binary", (PART_FLASH) },
 	{ ".config8", "mtd5", "Config8", 0x01b80000, 0x00020000, "binary", (PART_FLASH) },
 	{ ".configA", "mtd5", "ConfigA", 0x01ba0000, 0x00020000, "binary", (PART_FLASH) },
-	{  ".kernel", "mtd1",  "Kernel", 0x00100000, 0x00200000, "binary", (PART_FLASH) },
-	{     ".dev", "mtd4",     "Dev", 0x01800000, 0x00300000, "squash", (PART_FLASH | PART_SIGN) },
-	{  ".rootfs", "mtd3",    "Root", 0x00d00000, 0x00800000, "squash", (PART_FLASH | PART_SIGN) },
-	{    ".user", "mtd6",    "User", 0x01c00000, 0x00400000, "binary", (PART_FLASH) },
+	{  ".kernel", "mtd1", "Kernel", 0x00100000, 0x00200000, "binary", (PART_FLASH) },
+	{     ".dev", "mtd4",    "Dev", 0x01800000, 0x00300000, "squash", (PART_FLASH | PART_SIGN) },
+	{  ".rootfs", "mtd3",   "Root", 0x00d00000, 0x00800000, "squash", (PART_FLASH | PART_SIGN) },
+	{    ".user", "mtd6",   "User", 0x01c00000, 0x00400000, "binary", (PART_FLASH) },
 };
 
 struct tPartition partData2b[] =
@@ -105,7 +110,7 @@ struct tPartition partData2d[] =
 	{ ".config4", "mtd5", "Config4", 0x002140000, 0x0000007f, "binary", (PART_FLASH) },
 	{ ".config8", "mtd5", "Config8", 0x002180000, 0x0000007f, "binary", (PART_FLASH) },
 	{ ".configA", "mtd5", "ConfigA", 0x0021a0000, 0x0000007f, "binary", (PART_FLASH) },
-	{  ".kernel", "mtd1",  "Kernel", 0x000600000, 0x0000007f, "binary", (PART_FLASH) },
+	{  ".kernel", "mtd1",  "Kernel", 0x000060000, 0x0000007f, "binary", (PART_FLASH) },
 	{     ".dev", "mtd4",     "Dev", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{  ".rootfs", "mtd3",    "Root", 0x00000007f, 0x0000007f, "squash", (PART_FLASH | PART_SIGN) },
 	{    ".user", "mtd6",    "User", 0x002200000, 0x01e00000, "binary", (PART_FLASH) }

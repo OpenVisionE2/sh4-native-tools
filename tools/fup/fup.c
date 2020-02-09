@@ -21,8 +21,14 @@
  *****************************************************************************
  *
  * + TODO: change loader reseller ID.
- * + TODO: -i for loader 6.XX: display actual memory usage
- *         in stead of "Variable".
+ *
+ * Changes in Version 1.9.6b:
+ * + -i: generation 2 with loader 6.XX shows actual flash addresses.
+ * + -i: if ird file contains a loader partition, the new loaders reseller ID
+ *       and SW version are shown, and checks are made on loader
+ *       incompatibility and changed reseller (but compatible hardware).
+ * + Names of models with resellerId 0x23/0x25 with loader 5.xx now
+ *   display correct model name in -i and -r(v).
  *
  * Changes in Version 1.9.6a:
  * + Fix 0x13 error: ird file CRC16 in header was wrong
@@ -105,18 +111,21 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.6a"
-#define DATE "04.02.2020"
+#define VERSION "1.9.6b"
+#define DATE "06.02.2020"
 
 // Global variables
 uint8_t verbose = 1;
 char printstring;
 uint8_t has[MAX_PART_NUMBER];
 FILE *fd[MAX_PART_NUMBER];
+uint32_t ucLen[MAX_PART_NUMBER];
 uint16_t loaderFound;
 uint32_t column;
 uint8_t t_has[MAX_PART_NUMBER];
 uint32_t partcount;
+uint32_t loaderId;
+uint32_t loaderSW;
 
 /* Functions */
 
@@ -155,7 +164,7 @@ uint16_t toShort(uint8_t int16_tBuf[2])
 	return (uint16_t)(int16_tBuf[1] + (int16_tBuf[0] << 8));
 }
 
-uint16_t extractShort(uint8_t dataBuf[], uint16_t pos)
+uint16_t extract_2Bytes(uint8_t dataBuf[], uint16_t pos)
 {
 	uint8_t int16_tBuf[2];
 
@@ -174,7 +183,102 @@ uint16_t readShort(FILE *file)
 	return 0;
 }
 
-int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decLen, uint8_t writeflag)
+int32_t getGeneration(int32_t resellerId)
+{
+	int32_t generation;
+//	int32_t temp;
+
+//	temp = resellerId >> 24;  // get 1st resellerID byte
+	switch (resellerId >> 24)  // 1st resellerID byte
+	{
+		case 0x20:  // FS9000, FS9200, HS9510
+		{
+			generation = 1;
+			break;
+		}
+		case 0x23:  // HS8200
+		case 0x25:  // HS7110, HS7420, HS7810A
+		{
+//			if ((resellerId & 0xf0) == 0xa0)
+//			{
+				generation = 2;  // loader 6.XX
+//			}
+//			else
+//			{
+//				generation = 1;  // loader 5.XX
+//			}
+			break;
+		}
+		case 0x27:  // HS7119, HS7429, HS7819
+		{
+			generation = 3;  // loader 7.XX
+			break;
+		}
+		case 0x29:  // DP2010, DP6010, DP7000, DP7001, DP7050, GPV8000
+		case 0x2a:  // EP8000, EPP8000
+		{
+			generation = 4;  // loader 8.XX or X.0.X
+			break;
+		}
+		default:
+		{
+			generation = -1;
+			break;
+		}
+	}
+	return generation;
+}
+
+void getLoaderdata(uint8_t *dataBuf, uint32_t resellerId)
+{
+	if (loaderFound == 1)
+	{
+		switch (getGeneration(resellerId))
+		{
+			case 1:
+			{
+				loaderId = (dataBuf[RESELLER_OFFSET_GEN1]     << 24)  // stored little endian
+			 	         + (dataBuf[RESELLER_OFFSET_GEN1 + 1] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN1 + 2] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN1 + 3];
+				loaderSW = (dataBuf[RESELLER_OFFSET_GEN2 + 7] << 24)  // stored big endian
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 6] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 5] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 4];
+				break;
+			}
+			case 2:
+			case 3:
+			default:
+			{
+				loaderId = (dataBuf[RESELLER_OFFSET_GEN2]     << 24)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 1] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 2] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 3];
+				loaderSW = (dataBuf[RESELLER_OFFSET_GEN2 + 7] << 24)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 6] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 5] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 4];
+				break;
+			}
+			case 4:
+			{
+				loaderId = (dataBuf[RESELLER_OFFSET_GEN4]     << 24)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 1] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 2] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN4 + 3];
+				loaderSW = (dataBuf[RESELLER_OFFSET_GEN4 + 7] << 24)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 6] << 16)
+			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 5] <<  8)
+			 	         +  dataBuf[RESELLER_OFFSET_GEN4 + 4];
+				break;
+			}
+		}
+		loaderFound = 2;  // flag loader data set
+	}
+}
+
+int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decLen, uint8_t writeflag, uint32_t resellerId)
 {
 	if (len != decLen)
 	{
@@ -203,6 +307,7 @@ int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decL
 			fwrite(out, 1, decLen, file);
 			printProgress("z");
 		}
+		getLoaderdata(out, resellerId);
 		return decLen;
 	}
 	else
@@ -212,6 +317,7 @@ int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decL
 			fwrite(buffer, 1, len, file);
 			printProgress(".");
 		}
+		getLoaderdata(buffer, resellerId);
 		return len;
 	}
 }
@@ -321,7 +427,7 @@ uint32_t getresellerID(FILE *irdFile)
 {
 	uint8_t *dataBuf;
 
-	dataBuf = getHeader(irdFile);	
+	dataBuf = getHeader(irdFile);
 	return (((dataBuf[2] << 8) + dataBuf[3]) << 16) + (dataBuf[4] << 8) + dataBuf[5];  // resellerID from file
 }
 
@@ -329,7 +435,7 @@ uint32_t getSWversion(FILE *irdFile)
 {
 	uint8_t *dataBuf;
 
-	dataBuf = getHeader(irdFile);		
+	dataBuf = getHeader(irdFile);
 	return (((dataBuf[12] << 8) + dataBuf[13]) << 16) + (dataBuf[14] << 8) + dataBuf[15];  // SWversion from file
 }
 
@@ -354,10 +460,10 @@ int32_t writeBlock(FILE *irdFile, FILE *inFile, uint8_t firstBlock, uint16_t typ
 	 * Offset   Size      CRC  Name/purpose
 	 * -------------------------------------------
 	 *   0x00	uint16_t   N  length of header or normal block length
-	 *   0x02   uint16_t   N  CRC16 of rest over block
-	 *   0x04   uint16_t   Y  _xfdVer -> transfer format, 0x10 = compressed (type in data block) 
+	 *   0x02   uint16_t   N  CRC16 over rest of block
+	 *   0x04   uint16_t   Y  _xfdVer -> transfer format, 0x10 = compressed (type in data block)
 	 *   0x06   uint32_t   Y  _systemId -> resellerId
-	 *   0x0a   uint32_t   Y  _nDataBlk -> number of blocks in file  
+	 *   0x0a   uint32_t   Y  _nDataBlk -> number of blocks in file
 	 *   0x0e   uint32_t   Y  SWversion
 	 *
 	 **********************************************************************************************/
@@ -379,10 +485,10 @@ int32_t writeBlock(FILE *irdFile, FILE *inFile, uint8_t firstBlock, uint16_t typ
 	 * Offset   Size      CRC  Name/purpose
 	 * -------------------------------------------
 	 *   0x00   uint16_t   N   block length
-	 *   0x02	uint16_t   N   block type (0x00 - 0x0f) 
+	 *   0x02	uint16_t   N   block type (0x00 - 0x0f)
 	 *   0x04   uint16_t   N   data length (uncompressed length)
 	 *   0x08   uint16_t   N   CRC16 over rest of block
-	 *   0x0a   uint16_t   Y   compressed length 
+	 *   0x0a   uint16_t   Y   compressed length
 	 *   0x0c-   uint8_t   Y   block data (compressed length bytes in total)
 	 *
 	 **********************************************************************************************/
@@ -402,73 +508,27 @@ int32_t writeBlock(FILE *irdFile, FILE *inFile, uint8_t firstBlock, uint16_t typ
 	return ucDataLen;
 }
 
-int32_t getGeneration(int32_t resellerID)
-{
-	int32_t generation;
-	int32_t temp;
-
-	temp = resellerID >> 24;  // get 1st resellerID byte
-	switch (temp)
-	{
-		case 0x20:  // FS9000, FS9200, HS9510
-		{
-			generation = 1;
-			break;
-		}
-		case 0x23:  // HS8200
-		case 0x25:  // HS7110, HS7420, HS7810A
-		{
-			if ((resellerID & 0xf0) == 0xa0)
-			{
-				generation = 2;  // loader 6.XX
-			}
-			else
-			{
-				generation = 1;  // loader 5.XX
-			}
-			break;
-		}
-		case 0x27:  // HS7119, HS7429, HS7819
-		{
-			generation = 3;  // loader 7.XX
-			break;
-		}
-		case 0x29:  // DP2010, DP6010, DP7000, DP7001, DP7050, GPV8000
-		case 0x2a:  // EP8000, EPP8000
-		{
-			generation = 4;  // loader 8.XX or X.0.X
-			break;
-		}
-		default:
-		{
-			generation = -1;
-			break;
-		}
-	}
-	return generation;
-}
-
-char *getModelName(int32_t resellerID)
+char *getModelName(int32_t resellerId)
 {
 	int32_t i;
 	int32_t generation;
 
 	for (i = 0; i < sizeof(fortisNames); i++)
 	{
-		if (fortisNames[i].resellerID == resellerID)
+		if (fortisNames[i].resellerID == resellerId)
 		{
 			break;
 		}
 	}
 	if (i == sizeof(fortisNames))  // if not found, retry for loader 6.XX
 	{
-		generation = getGeneration(resellerID);
+		generation = getGeneration(resellerId);
 		if (generation == 2 || generation == 3)
 		{
-			resellerID |= 0xA0;
+			resellerId |= 0xA0;
 			for (i = 0; i < sizeof(fortisNames); i++)
 			{
-				if (fortisNames[i].resellerID == resellerID)
+				if (fortisNames[i].resellerID == resellerId)
 				{
 					break;
 				}
@@ -580,6 +640,7 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 	uint16_t generation;
 	char *modelName;
 	struct tPartition *tableAddr;
+	uint16_t part_number = 0;
 
 	len = readShort(file);  // get length of block
 	if (len < 1)
@@ -601,17 +662,18 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 //		getchar();
 		return -1;
 	}
-	type = extractShort(dataBuf, 0);
+	type = extract_2Bytes(dataBuf, 0);
 	blockCounter++;
 
 //	if (firstBlock && ((type == 0x10) || type == 0x01))
 	if (firstBlock && type == 0x10)
 	{
-		fpVersion = extractShort(dataBuf, 0);
-		systemId = ((extractShort(dataBuf, 2)) << 16) + extractShort(dataBuf, 4);
-		blockCount = ((extractShort(dataBuf, 6)) << 16) + extractShort(dataBuf, 8);
-		SWVersion1 = extractShort(dataBuf, 12);
-		SWVersion2 = extractShort(dataBuf, 14);
+		part_number++;
+		fpVersion = extract_2Bytes(dataBuf, 0);
+		systemId = ((extract_2Bytes(dataBuf, 2)) << 16) + extract_2Bytes(dataBuf, 4);
+		blockCount = ((extract_2Bytes(dataBuf, 6)) << 16) + extract_2Bytes(dataBuf, 8);
+		SWVersion1 = extract_2Bytes(dataBuf, 12);
+		SWVersion2 = extract_2Bytes(dataBuf, 14);
 
 		if (verbose == 1)
 		{
@@ -628,13 +690,13 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 	}
 	else
 	{  // not header block but normal partition block
-		loaderFound = 0;
 		if (type < MAX_PART_NUMBER)
 		{
 			if (!has[type])
 			{
-//				has[type]++;
-				has[type] = 1;
+				part_number++;
+				has[type] = part_number;
+				ucLen[type] = 0;
 				column = 0;
 				if (verbose == 1)
 				{
@@ -645,7 +707,7 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 					}
 					printf(")\n");
 				}
-				if (type == 0x00)
+				if (type == 0x00 && loaderFound == 0)
 				{
 					loaderFound = 1;
 				}
@@ -659,7 +721,7 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 					strcat(nameOut, tableAddr[type].Extension2);
 
 					fd[type] = fopen(nameOut, "wb");
-	
+
 					if (fd[type] == NULL)
 					{
 						printf("\nERROR: Cannot open output file %s.\n", nameOut);
@@ -672,12 +734,13 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 				}
 				else
 				{
-					t_has[partcount] = type;
+					t_has[partcount] = (type == 0 ? 0x10 : type);
 					partcount++;
 				}
 			}
-			decLen = extractShort(dataBuf, 2);
-			extractAndWrite(fd[type], dataBuf + 4, len - 6, decLen, writeflag);
+			decLen = extract_2Bytes(dataBuf, 2);
+			ucLen[type] += decLen;
+			extractAndWrite(fd[type], dataBuf + 4, len - 6, decLen, writeflag, systemId);
 		}
 		else
 		{
@@ -690,16 +753,16 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 }
 
 void scanBlocks(FILE *irdFile)
-{  // finds the types of partitions in irdFile and sets has[] accordingly.
+{  // finds the types of partitions in irdFile and sets has[] and ucLen[] accordingly.
 	int32_t len;
 	int32_t pos = 0;
 	int32_t i, j;
-	uint16_t *type = {0};
 	uint8_t	firstBlock = 1;
 
 	for (i = 0; i < MAX_PART_NUMBER; i++)
 	{
 		has[i] = 0;
+		t_has[i] = 0;
 	}
 	verbose = 0;
 	while (!feof(irdFile))
@@ -810,8 +873,8 @@ void changeSWVersion(FILE *irdFile, uint32_t SWVersion)
 	headerDataBlockLen = getHeaderLen(irdFile);
 	dataBuf = getHeader(irdFile);
 
-	oldSWversion1 = extractShort(dataBuf, 12);  // Get current SW version hi from file
-	oldSWversion2 = extractShort(dataBuf, 14);  // Get current SW version lo from file
+	oldSWversion1 = extract_2Bytes(dataBuf, 12);  // Get current SW version hi from file
+	oldSWversion2 = extract_2Bytes(dataBuf, 14);  // Get current SW version lo from file
 
 	// Update Software version number
 	insertint16_t(&dataBuf, 12, (SWVersion >> 16));
@@ -840,6 +903,8 @@ int32_t main(int32_t argc, char* argv[])
 		FILE *irdFile;
 		uint16_t generation;
 		tPartition *tableAddr;
+		uint32_t Offset[MAX_PART_NUMBER];
+		uint32_t Size[MAX_PART_NUMBER];
 
 		irdFile = fopen(argv[2], "r");
 		if (irdFile == NULL)
@@ -848,32 +913,188 @@ int32_t main(int32_t argc, char* argv[])
 			return -1;
 		}
 		printf("\nInformation on flash file %s\n\n", argv[2]);
-		printf("Headerinfo:\n");
+		printf("Header info:\n");
 		resellerId = getresellerID(irdFile);
-		printf("  Reseller ID      : 0x%08X\n", resellerId);
-		printf("  Reseller model   : %s\n", getModelName(resellerId));
+		printf("  Reseller ID        : 0x%08X\n", resellerId);
+		printf("  Reseller model     : %s\n", getModelName(resellerId));
 		SWVersion = getSWversion(irdFile);
-		printf("  Software version : V%X.%02X.%02X\n", SWVersion >> 16, (SWVersion & 0x0000FF00) >> 8, SWVersion & 0xFF);
+		printf("  Software version   : V%X.%02X.%02X\n", SWVersion >> 16, (SWVersion & 0x0000FF00) >> 8, SWVersion & 0xFF);
 		dataBuffer = getHeader(irdFile);
-		i = ((extractShort(dataBuffer, 6)) << 16) + extractShort(dataBuffer, 8);  // block count 
-		printf("  Number of blocks : %d (%04X)\n", i, i);
+		i = ((extract_2Bytes(dataBuffer, 6)) << 16) + extract_2Bytes(dataBuffer, 8);  // block count
+		printf("  Number of blocks   : %d (0x%04X)\n", i, i);
 //#if not defined USE_ZLIB
-//		j = extractShort(dataBuffer, 0) >> 1;
-//		printf("  File size        : %d (Calculated from # of blocks)\n", ((i << 18) + j));
+//		j = extract_2Bytes(dataBuffer, 0) >> 1;
+//		printf("  File size          : %d (Calculated from # of blocks)\n", ((i << 18) + j));
 //#endif
-		printf("\nPartitiondata (order as in file):\n");
-		printf("  Type mtd  mtdname start      end        size       FS     flash signed\n");
-		printf("  ======================================================================\n");
 		fseek(irdFile, 0, SEEK_SET);
 		partcount = 0;
+		loaderFound = 0;
 		scanBlocks(irdFile);
+
+		// Check if .ird file contains a loader partition
+		if (loaderFound == 2)
+		{
+			printf("Loader info:\n");
+			printf("  Loader reseller ID : 0x%08X\n", loaderId);
+			printf("  Loader version     : V%X.%02X.%02X\n", (loaderSW >> 16) & 0xff, (loaderSW >> 8) & 0xff, loaderSW & 0xff);
+			if ((loaderId & 0xff00ff5f) != (resellerId & 0xff00ff5f))
+			{
+				printf("\nCAUTION: Loader is NOT compatible with hardware for resellerID %08X!\n", resellerId);
+				printf("         Loader is for a(n) %s (%08X).\n", getModelName(loaderId), loaderId);
+			}
+			else if ((loaderId & 0x00ff00ff) != (resellerId & 0x00ff00ff))
+			{
+				printf("\nCAUTION: After flashing this file, reseller code is changed to %08X.\n", loaderId);
+				if ((loaderId & 0xffffff5f) != (resellerId & 0xffffff5f))
+				{
+					printf("         Reseller code %08X is for a(n) %s.\n", loaderId, getModelName(loaderId));
+				}
+			}
+		}
 		generation = getGeneration(resellerId);
 		tableAddr = getTableAddr(generation, resellerId);
 
+		// Handle generation 2 (possible variable layout)
+		if ((generation == 2) && (resellerId & 0xf0) == 0xa0)
+		{
+			// Step one: round the mtd sizes up to the next erase boundary
+			for (i = 0; i < MAX_PART_NUMBER; i++)
+			{
+				if ((ucLen[t_has[i]] % ERASE_SIZE != 0) && (tableAddr[t_has[i]].Size == 0x7f))
+				{
+					j = (ucLen[t_has[i]] % ERASE_SIZE);
+					ucLen[t_has[i]] -= j;
+					ucLen[t_has[i]] += ERASE_SIZE;
+				}
+			}
+			// Step two: Calculate the offsets and sizes if case they are variable;
+			// because the partitions can appear in the flas file in any order, this
+			// has to be done in sequence of flashing
+			for (i = 0; i < MAX_PART_NUMBER; i++)
+			{
+				if (t_has[i] == 0x10)  // loader
+				{
+					// Handle loader (type0, fixed offset, fixed length)
+					Offset[0] = tableAddr[0].Offset;
+					Size[0] = tableAddr[0].Size;
+				}
+				if (t_has[i] == 6)  // kernel
+				{
+					// Handle kernel (type 6, fixed offset, variable length)
+					Offset[6] = tableAddr[6].Offset;
+					if (tableAddr[6].Size == 0x7f)
+					{
+						Size[6] = ucLen[6];
+					}
+					else
+					{
+						Size[6] = tableAddr[6].Size;
+					}
+				}
+				// Handle Config (types 2, 3, 4 & 5; fixed offset, variable length)
+				for (j = 2; j < 6; j++)
+				{
+					if (t_has[i] == j)
+					{
+						Offset[j] = tableAddr[j].Offset;
+						if (tableAddr[j].Size == 0x7f)
+						{
+							Size[j] = ucLen[j];
+						}
+						else
+						{
+							Size[j] = tableAddr[j].Size;
+						}
+					}
+				}
+				// Handle User (type 9; fixed offset, variable length)
+				if (t_has[i] == 9)
+				{
+					Offset[9] = tableAddr[9].Offset;
+					Size[9] = ucLen[9];
+				}
+			}
+			// Handle rootfs (type 8, variable offset, variable length)
+			for (i = 0; i < MAX_PART_NUMBER; i++)
+			{
+				if (t_has[i] == 8)  // rootfs
+				{
+					if (tableAddr[8].Offset == 0x7f)
+					{
+						Offset[8] = tableAddr[6].Offset + ucLen[6];  // kernel offset + kernel length
+					}
+					else
+					{
+						Offset[8] = tableAddr[8].Offset;
+					}
+					if (tableAddr[8].Size == 0x7f)
+					{
+						Size[8] = ucLen[8];
+					}
+					else
+					{
+						Size[8] = tableAddr[8].Size;
+					}
+				}
+			}
+			// Handle dev (type 7, variable offset & length)
+			for (i = 0; i < MAX_PART_NUMBER; i++)
+			{
+				if (t_has[i] == 7)  // dev
+				{
+					if (tableAddr[7].Offset == 0x7f)
+					{
+						Offset[7] = Offset[8] + ucLen[8];  // rootfs offset + rootfs length
+					}
+					else
+					{
+						Offset[7] = tableAddr[7].Offset;
+					}
+					if (tableAddr[7].Size == 0x7f)
+					{
+						Size[7] = ucLen[7];
+					}
+					else
+					{
+						Size[7] = tableAddr[7].Size;  // dev length
+					}
+				}
+			}
+			// Handle app (type 1, variable offset & length)
+			for (i = 0; i < MAX_PART_NUMBER; i++)
+			{
+				if (t_has[i] == 1)  // app
+				{
+					if (tableAddr[1].Offset == 0x7f)
+					{
+						Offset[t_has[i]] = Offset[7] + ucLen[7];  // dev offset + devfs length
+					}
+					else
+					{
+						Offset[t_has[i]] = tableAddr[t_has[i]].Offset;
+					}
+					if (tableAddr[t_has[i]].Size == 0x7f)
+					{
+						Size[t_has[i]] = ucLen[t_has[i]];  // app length
+					}
+					else
+					{
+						Size[t_has[i]] = tableAddr[t_has[i]].Size;
+					}
+				}
+			}
+		}
+
+		// Step three: display info
+		printf("\nPartition data (order as in file):\n");
+		printf("  Type mtd  mtdname start      end        size       FS     flash signed\n");
+		printf("  ======================================================================\n");
+
 		for (i = 0; i < MAX_PART_NUMBER; i++)
 		{
-			if (t_has[i])
+			if (t_has[i] != 0 && (t_has[i] < MAX_PART_NUMBER || t_has[i] == 0x10))
 			{
+				t_has[i] = (t_has[i] == 0x10 ? 0 : t_has[i]);
 				printf("    %d", t_has[i]);
 				printf("  %s", tableAddr[t_has[i]].Extension2);
 				printf(" %s", tableAddr[t_has[i]].Description);
@@ -881,33 +1102,15 @@ int32_t main(int32_t argc, char* argv[])
 				{
 					printf(" ");
 				}
-				// TODO: detailed loader 6.XX aspects
-				if (generation != 2)
+				if (generation == 2 && (resellerId & 0xf0) == 0xa0)
+				{  // Loader 6.XX: variable offsets
+					printf(" 0x%08X 0x%08X 0x%08X", Offset[t_has[i]], (Offset[t_has[i]] + Size[t_has[i]] - 1), Size[t_has[i]]);
+				}
+				else
 				{
 					printf(" 0x%08X", tableAddr[t_has[i]].Offset);
 					printf(" 0x%08X", tableAddr[t_has[i]].Offset + tableAddr[t_has[i]].Size - 1);
 					printf(" 0x%08X", tableAddr[t_has[i]].Size);
-				}
-				else  // Loader 6.XX: variable offsets
-				{
-					if (tableAddr[t_has[i]].Offset == 0x7f)
-					{
-						printf(" Variable  ");
-					}
-					else
-					{
-						printf(" 0x%08X", tableAddr[t_has[i]].Offset);
-					}
-					if (tableAddr[t_has[i]].Size == 0x7f)
-					{
-						printf(" Variable  ");
-						printf(" Variable  ");
-					}
-					else
-					{
-						printf(" 0x%08X", tableAddr[t_has[i]].Offset + tableAddr[t_has[i]].Size - 1);
-						printf(" 0x%08X", tableAddr[t_has[i]].Size);
-					}
 				}
 				printf(" %s", tableAddr[t_has[i]].FStype);
 				for (j = 0; j < (8 - strlen(tableAddr[t_has[i]].FStype)); j++)
@@ -919,6 +1122,11 @@ int32_t main(int32_t argc, char* argv[])
 				printf("\n");
 			}
 		}
+		if (generation == 2 && (resellerId & 0xf0) == 0xa0)
+		{
+			printf("  Note: start addresses and sizes are multiples of erase size (0x%X).\n", ERASE_SIZE);
+		}
+		printf("\n");
 	}
 	else if ((argc == 2 && strlen(argv[1]) == 2 && strncmp(argv[1], "-d", 2) == 0)
 	     ||  (argc == 2 && strlen(argv[1]) == 3 && strncmp(argv[1], "-dv", 3) == 0))  // force create dummy
@@ -1521,7 +1729,7 @@ int32_t main(int32_t argc, char* argv[])
 
 			if ((type != 0x88) && (type != 0x81) && (type != 0x82))
 			{
-				if (verbose) 
+				if (verbose)
 				{
 					printf("\nNew partition, type %02X\n", type);
 				}
