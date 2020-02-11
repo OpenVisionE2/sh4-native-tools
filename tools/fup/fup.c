@@ -22,6 +22,11 @@
  *
  * + TODO: change loader reseller ID.
  *
+ * Changes in Version 1.9.6c:
+ * + Added automake style build files.
+ * + Fixed struct tPartition errors.
+ * + Fixed compiler warnings with fread and uninitialzed variables.
+ *
  * Changes in Version 1.9.6b:
  * + -i: generation 2 with loader 6.XX shows actual flash addresses.
  * + -i: if ird file contains a loader partition, the new loaders reseller ID
@@ -111,8 +116,8 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.6b"
-#define DATE "06.02.2020"
+#define VERSION "1.9.6c"
+#define DATE "11.02.2020"
 
 // Global variables
 uint8_t verbose = 1;
@@ -186,9 +191,7 @@ uint16_t readShort(FILE *file)
 int32_t getGeneration(int32_t resellerId)
 {
 	int32_t generation;
-//	int32_t temp;
 
-//	temp = resellerId >> 24;  // get 1st resellerID byte
 	switch (resellerId >> 24)  // 1st resellerID byte
 	{
 		case 0x20:  // FS9000, FS9200, HS9510
@@ -199,14 +202,7 @@ int32_t getGeneration(int32_t resellerId)
 		case 0x23:  // HS8200
 		case 0x25:  // HS7110, HS7420, HS7810A
 		{
-//			if ((resellerId & 0xf0) == 0xa0)
-//			{
-				generation = 2;  // loader 6.XX
-//			}
-//			else
-//			{
-//				generation = 1;  // loader 5.XX
-//			}
+			generation = 2;  // loader 6.XX
 			break;
 		}
 		case 0x27:  // HS7119, HS7429, HS7819
@@ -278,7 +274,7 @@ void getLoaderdata(uint8_t *dataBuf, uint32_t resellerId)
 	}
 }
 
-int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decLen, uint8_t writeflag, uint32_t resellerId)
+int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decLen, uint8_t writeflag, uint32_t systemId)
 {
 	if (len != decLen)
 	{
@@ -307,7 +303,7 @@ int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decL
 			fwrite(out, 1, decLen, file);
 			printProgress("z");
 		}
-		getLoaderdata(out, resellerId);
+		getLoaderdata(out, systemId);
 		return decLen;
 	}
 	else
@@ -317,7 +313,7 @@ int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decL
 			fwrite(buffer, 1, len, file);
 			printProgress(".");
 		}
-		getLoaderdata(buffer, resellerId);
+		getLoaderdata(buffer, systemId);
 		return len;
 	}
 }
@@ -410,6 +406,7 @@ uint8_t *getHeader(FILE *irdFile)
 {
 	uint16_t headerDataBlockLen;
 	uint8_t *dataBuf;
+	int temp = 0;
 
 	headerDataBlockLen = 0;
 	headerDataBlockLen = readShort(irdFile);
@@ -418,8 +415,13 @@ uint8_t *getHeader(FILE *irdFile)
 	// Read Header Data Block
 	dataBuf = (uint8_t *)malloc(headerDataBlockLen);
 	fseek(irdFile, 0x04, SEEK_SET);  // 0x04 -> skip length & CRC
-	fread(dataBuf, 1, headerDataBlockLen, irdFile);
+	temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
 
+	if (temp)
+	{
+		printf("Reading header failed\n");
+		return (uint8_t *) -1;
+	}
 	return dataBuf;
 }
 
@@ -485,7 +487,7 @@ int32_t writeBlock(FILE *irdFile, FILE *inFile, uint8_t firstBlock, uint16_t typ
 	 * Offset   Size      CRC  Name/purpose
 	 * -------------------------------------------
 	 *   0x00   uint16_t   N   block length
-	 *   0x02	uint16_t   N   block type (0x00 - 0x0f)
+	 *   0x02   uint16_t   N   block type (0x00 - 0x0f)
 	 *   0x04   uint16_t   N   data length (uncompressed length)
 	 *   0x08   uint16_t   N   CRC16 over rest of block
 	 *   0x0a   uint16_t   Y   compressed length
@@ -542,9 +544,9 @@ char *getModelName(int32_t resellerId)
 	return (char *)fortisNames[i].reseller_name;
 }
 
-tPartition *getTableAddr(uint32_t generation, uint32_t resellerId)
+struct tPartition *getTableAddr(uint32_t generation, uint32_t resellerId)
 {
-	tPartition *partTable;
+	struct tPartition *partTable = partData2d;  // default is HS8200 L6.00
 
 	switch (generation)
 	{
@@ -633,13 +635,13 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 	uint8_t dataBuf[DATA_BLOCK_SIZE + 6];
 	uint16_t fpVersion;
 	uint32_t blockCount;
-	uint32_t systemId;
-	uint32_t SWVersion0;
+	uint32_t systemId = RESELLER_ID;  // use default resellerID
+//	uint32_t SWVersion0;
 	uint16_t SWVersion1;
 	uint16_t SWVersion2;
 	uint16_t generation;
 	char *modelName;
-	struct tPartition *tableAddr;
+	struct tPartition *tableAddr = partData2d;  // default is HS8200 L6.00
 	uint16_t part_number = 0;
 
 	len = readShort(file);  // get length of block
@@ -756,7 +758,7 @@ void scanBlocks(FILE *irdFile)
 {  // finds the types of partitions in irdFile and sets has[] and ucLen[] accordingly.
 	int32_t len;
 	int32_t pos = 0;
-	int32_t i, j;
+	int32_t i;
 	uint8_t	firstBlock = 1;
 
 	for (i = 0; i < MAX_PART_NUMBER; i++)
@@ -898,11 +900,11 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t i, j;
 		uint32_t resellerId;
 		uint32_t SWVersion;
-		uint16_t *present;
+//		uint16_t *present;
 		uint8_t *dataBuffer;
 		FILE *irdFile;
 		uint16_t generation;
-		tPartition *tableAddr;
+		struct tPartition *tableAddr;
 		uint32_t Offset[MAX_PART_NUMBER];
 		uint32_t Size[MAX_PART_NUMBER];
 
@@ -1328,13 +1330,14 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t SWVersion;
 		uint16_t headerDataBlockLen;
 		uint32_t totalBlockCount;
-		uint16_t dataCrc = 0;
+//		uint16_t dataCrc = 0;
 		uint16_t type;
 		uint8_t *dataBuf;
 		uint8_t appendPartCount;
 		uint16_t partBlockcount;
 		FILE *infile;
 		FILE *irdFile;
+		uint16_t temp;
 
 		irdFile = fopen(argv[2], "wb+");
 		if (irdFile == NULL)
@@ -1538,7 +1541,12 @@ int32_t main(int32_t argc, char* argv[])
 
 		// Read Header Data Block
 		fseek(irdFile, 0x04, SEEK_SET);
-		fread(dataBuf, 1, headerDataBlockLen, irdFile);
+		temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
+		if (temp)
+		{
+			printf("Reading header failed\n");
+			return -1;
+		}
 
 		// Update Blockcount
 		insertint16_t(&dataBuf, 0x08, (int16_t)totalBlockCount & 0xFFFF);
@@ -1558,7 +1566,7 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t resellerId;
 		uint32_t SWVersion;
 		uint16_t type;
-		uint16_t dataCrc = 0;
+//		uint16_t dataCrc = 0;
 		uint16_t totalBlockCount;
 		uint16_t headerDataBlockLen;
 		uint8_t appendPartCount;
@@ -1567,6 +1575,7 @@ int32_t main(int32_t argc, char* argv[])
 		uint8_t *dataBuf;
 		FILE *file;
 		FILE *irdFile;
+		uint16_t temp;
 
 		verbose = 0;
 		irdFile = fopen(argv[2], "wb+");
@@ -1836,13 +1845,18 @@ int32_t main(int32_t argc, char* argv[])
 					}
 				}
 			}
-		}
+ 		}
 		// Refresh Header
 		dataBuf = (uint8_t *)malloc(headerDataBlockLen);
 
 		// Read Header Data Block
 		fseek(irdFile, 0x04, SEEK_SET);
-		fread(dataBuf, 1, headerDataBlockLen, irdFile);
+		temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
+		if (temp)
+		{
+			printf("Reading header failed\n");
+			return -1;
+		}
 
 		// Update Blockcount
 		insertint16_t(&dataBuf, 0x08, (int16_t)totalBlockCount & 0xFFFF);
