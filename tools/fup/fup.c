@@ -22,9 +22,14 @@
  *
  * + TODO: change loader reseller ID.
  *
+ * Changes in Version 1.9.6d:
+ * + Return value of fread was handled wrong with reading back the header.
+ * + Fixed error in retrieving SW version in generation 1 loader
+ *   in getLoaderdata, simplied code.
+ *
  * Changes in Version 1.9.6c:
  * + Added automake style build files.
- * + Fixed struct tPartition errors.
+ * + Fixed struct tPartition errors with automake style compilation.
  * + Fixed compiler warnings with fread and uninitialzed variables.
  *
  * Changes in Version 1.9.6b:
@@ -116,8 +121,8 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.6c"
-#define DATE "11.02.2020"
+#define VERSION "1.9.6d"
+#define DATE "12.02.2020"
 
 // Global variables
 uint8_t verbose = 1;
@@ -227,49 +232,39 @@ int32_t getGeneration(int32_t resellerId)
 
 void getLoaderdata(uint8_t *dataBuf, uint32_t resellerId)
 {
+	uint32_t offset;
+
 	if (loaderFound == 1)
 	{
 		switch (getGeneration(resellerId))
 		{
 			case 1:
 			{
-				loaderId = (dataBuf[RESELLER_OFFSET_GEN1]     << 24)  // stored little endian
-			 	         + (dataBuf[RESELLER_OFFSET_GEN1 + 1] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN1 + 2] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN1 + 3];
-				loaderSW = (dataBuf[RESELLER_OFFSET_GEN2 + 7] << 24)  // stored big endian
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 6] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 5] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 4];
+				offset = RESELLER_OFFSET_GEN1;
 				break;
 			}
 			case 2:
 			case 3:
 			default:
 			{
-				loaderId = (dataBuf[RESELLER_OFFSET_GEN2]     << 24)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 1] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 2] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 3];
-				loaderSW = (dataBuf[RESELLER_OFFSET_GEN2 + 7] << 24)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 6] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN2 + 5] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN2 + 4];
+				offset = RESELLER_OFFSET_GEN2;
 				break;
 			}
 			case 4:
 			{
-				loaderId = (dataBuf[RESELLER_OFFSET_GEN4]     << 24)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 1] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 2] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN4 + 3];
-				loaderSW = (dataBuf[RESELLER_OFFSET_GEN4 + 7] << 24)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 6] << 16)
-			 	         + (dataBuf[RESELLER_OFFSET_GEN4 + 5] <<  8)
-			 	         +  dataBuf[RESELLER_OFFSET_GEN4 + 4];
+				offset = RESELLER_OFFSET_GEN4;
 				break;
 			}
 		}
+		loaderId = (dataBuf[offset]     << 24)  // stored little endian
+	 	         + (dataBuf[offset + 1] << 16)
+	 	         + (dataBuf[offset + 2] <<  8)
+	 	         +  dataBuf[offset + 3];
+		loaderSW = (dataBuf[offset + 7] << 24)  // stored big endian
+	 	         + (dataBuf[offset + 6] << 16)
+	 	         + (dataBuf[offset + 5] <<  8)
+	 	         +  dataBuf[offset + 4];
+
 		loaderFound = 2;  // flag loader data set
 	}
 }
@@ -406,7 +401,7 @@ uint8_t *getHeader(FILE *irdFile)
 {
 	uint16_t headerDataBlockLen;
 	uint8_t *dataBuf;
-	int temp = 0;
+	int count = 0;
 
 	headerDataBlockLen = 0;
 	headerDataBlockLen = readShort(irdFile);
@@ -415,11 +410,11 @@ uint8_t *getHeader(FILE *irdFile)
 	// Read Header Data Block
 	dataBuf = (uint8_t *)malloc(headerDataBlockLen);
 	fseek(irdFile, 0x04, SEEK_SET);  // 0x04 -> skip length & CRC
-	temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
+	count = fread(dataBuf, 1, headerDataBlockLen, irdFile);
 
-	if (temp)
+	if (count != headerDataBlockLen)
 	{
-		printf("Reading header failed\n");
+		printf("Reading header failed.\n");
 		return (uint8_t *) -1;
 	}
 	return dataBuf;
@@ -636,7 +631,6 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 	uint16_t fpVersion;
 	uint32_t blockCount;
 	uint32_t systemId = RESELLER_ID;  // use default resellerID
-//	uint32_t SWVersion0;
 	uint16_t SWVersion1;
 	uint16_t SWVersion2;
 	uint16_t generation;
@@ -900,7 +894,6 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t i, j;
 		uint32_t resellerId;
 		uint32_t SWVersion;
-//		uint16_t *present;
 		uint8_t *dataBuffer;
 		FILE *irdFile;
 		uint16_t generation;
@@ -970,8 +963,8 @@ int32_t main(int32_t argc, char* argv[])
 				}
 			}
 			// Step two: Calculate the offsets and sizes if case they are variable;
-			// because the partitions can appear in the flas file in any order, this
-			// has to be done in sequence of flashing
+			// because the partitions can appear in the flash file in any order, this
+			// has to be done in sequence of flashing for types 8, 7 and 1.
 			for (i = 0; i < MAX_PART_NUMBER; i++)
 			{
 				if (t_has[i] == 0x10)  // loader
@@ -1202,6 +1195,7 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t orgcrc = 0;
 		uint8_t buffer[DATA_BUFFER_SIZE];
 		FILE *file;
+		int32_t count;
 
 		if (strncmp(argv[1], "-tv", 3) == 0)
 		{
@@ -1221,7 +1215,7 @@ int32_t main(int32_t argc, char* argv[])
 
 		while (!feof(file))
 		{  // Actually we should remove the signature at the end
-			int32_t count = fread(buffer, 1, DATA_BUFFER_SIZE, file);
+			count = fread(buffer, 1, DATA_BUFFER_SIZE, file);
 			if (count != DATA_BUFFER_SIZE)
 			{
 				orgcrc = (buffer[count - 1] << 24) + (buffer[count - 2] << 16) + (buffer[count - 3] << 8) + (buffer[count - 4]);
@@ -1330,7 +1324,6 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t SWVersion;
 		uint16_t headerDataBlockLen;
 		uint32_t totalBlockCount;
-//		uint16_t dataCrc = 0;
 		uint16_t type;
 		uint8_t *dataBuf;
 		uint8_t appendPartCount;
@@ -1542,9 +1535,9 @@ int32_t main(int32_t argc, char* argv[])
 		// Read Header Data Block
 		fseek(irdFile, 0x04, SEEK_SET);
 		temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
-		if (temp)
+		if (temp != headerDataBlockLen)
 		{
-			printf("Reading header failed\n");
+			printf("Reading header failed.\n");
 			return -1;
 		}
 
@@ -1566,7 +1559,6 @@ int32_t main(int32_t argc, char* argv[])
 		uint32_t resellerId;
 		uint32_t SWVersion;
 		uint16_t type;
-//		uint16_t dataCrc = 0;
 		uint16_t totalBlockCount;
 		uint16_t headerDataBlockLen;
 		uint8_t appendPartCount;
