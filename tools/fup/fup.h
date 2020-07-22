@@ -131,7 +131,7 @@ struct tPartition partData3[] =
 };
 
 struct tPartition partData4[] =
-{  // 256MB flash (fourth generation except 7050, loader 8.X4, 8.X6, 8.X7 or X.0X) # to be checked
+{  // 256MB flash (fourth generation except DP7050, loader 8.X4, 8.X6, 8.X7 or X.0X) # to be checked
 	{ ".loader", "mtd0", "Loader", 0x00000000, 0x00100000, "binary", (PART_FLASH) },
 	{ ".rootfs", "mtd2",   "Root", 0x00800000, 0x0b600000, "UBI"   , (PART_FLASH) },
 	{ ".config", "mtd5", "Config", 0x0fe00000, 0x00200000, "binary", 0 }, // not writeable by IRD

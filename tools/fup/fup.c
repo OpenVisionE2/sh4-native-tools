@@ -22,15 +22,21 @@
  *
  * + TODO: change loader reseller ID.
  *
+ * Changes in Version 1.9.7:
+ * + Fix typo in error message
+ * + Fix error in header read back in -ce command
+ * + Fix error in reporting illegal suboption in -c command
+ * + Improvements in verbose output with -c and -ce
+ *
  * Changes in Version 1.9.6d:
  * + Return value of fread was handled wrong with reading back the header.
  * + Fixed error in retrieving SW version in generation 1 loader
- *   in getLoaderdata, simplied code.
+ *   in getLoaderdata, simplified code.
  *
  * Changes in Version 1.9.6c:
  * + Added automake style build files.
  * + Fixed struct tPartition errors with automake style compilation.
- * + Fixed compiler warnings with fread and uninitialzed variables.
+ * + Fixed compiler warnings with fread and uninitialized variables.
  *
  * Changes in Version 1.9.6b:
  * + -i: generation 2 with loader 6.XX shows actual flash addresses.
@@ -121,8 +127,8 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.6d"
-#define DATE "12.02.2020"
+#define VERSION "1.9.7"
+#define DATE "18.07.2020"
 
 // Global variables
 uint8_t verbose = 1;
@@ -215,7 +221,7 @@ int32_t getGeneration(int32_t resellerId)
 			generation = 3;  // loader 7.XX
 			break;
 		}
-		case 0x29:  // DP2010, DP6010, DP7000, DP7001, DP7050, GPV8000
+		case 0x29:  // DP2010, FX6010, DP7000, DP7001, DP7050, GPV8000
 		case 0x2a:  // EP8000, EPP8000
 		{
 			generation = 4;  // loader 8.XX or X.0.X
@@ -414,7 +420,7 @@ uint8_t *getHeader(FILE *irdFile)
 
 	if (count != headerDataBlockLen)
 	{
-		printf("Reading header failed.\n");
+		printf("ERROR: Reading header failed.\n");
 		return (uint8_t *) -1;
 	}
 	return dataBuf;
@@ -890,7 +896,7 @@ void changeSWVersion(FILE *irdFile, uint32_t SWVersion)
 int32_t main(int32_t argc, char* argv[])
 {
 	if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-i", 2) == 0))
-	{  // display file info
+	{  // i: display file info
 		uint32_t i, j;
 		uint32_t resellerId;
 		uint32_t SWVersion;
@@ -962,7 +968,7 @@ int32_t main(int32_t argc, char* argv[])
 					ucLen[t_has[i]] += ERASE_SIZE;
 				}
 			}
-			// Step two: Calculate the offsets and sizes if case they are variable;
+			// Step two: Calculate the offsets and sizes in case they are variable;
 			// because the partitions can appear in the flash file in any order, this
 			// has to be done in sequence of flashing for types 8, 7 and 1.
 			for (i = 0; i < MAX_PART_NUMBER; i++)
@@ -1124,8 +1130,8 @@ int32_t main(int32_t argc, char* argv[])
 		printf("\n");
 	}
 	else if ((argc == 2 && strlen(argv[1]) == 2 && strncmp(argv[1], "-d", 2) == 0)
-	     ||  (argc == 2 && strlen(argv[1]) == 3 && strncmp(argv[1], "-dv", 3) == 0))  // force create dummy
-	{
+	     ||  (argc == 2 && strlen(argv[1]) == 3 && strncmp(argv[1], "-dv", 3) == 0))
+	{   // -d(v): create a dummy squashfs file
 		if (strncmp(argv[1], "-dv", 3) == 0)
 		{
 			verbose = 1;
@@ -1138,7 +1144,7 @@ int32_t main(int32_t argc, char* argv[])
 	}
 	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-s", 2) == 0)
 	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-sv", 3) == 0))  // sign squashfs part
-	{
+	{   // -s(v): sign squashfs part
 		uint32_t crc = 0;
 		char signedFileName[128];
 		uint8_t buffer[DATA_BUFFER_SIZE];
@@ -1189,8 +1195,8 @@ int32_t main(int32_t argc, char* argv[])
 		fclose(signedFile);
 	}
 	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-t", 2) == 0)
-	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-tv", 3) == 0))  // check signed squashfs part signature
-	{
+	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-tv", 3) == 0))
+	{  // -t(v): check signed squashfs part signature
 		uint32_t crc = 0;
 		uint32_t orgcrc = 0;
 		uint8_t buffer[DATA_BUFFER_SIZE];
@@ -1239,8 +1245,8 @@ int32_t main(int32_t argc, char* argv[])
 		}
 	}
 	else if ((argc == 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-x", 2) == 0)
-	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-xv", 3) == 0))  // extract IRD into composing parts
-	{
+	     ||  (argc == 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-xv", 3) == 0))
+	{  // -x(v): extract IRD into composing parts
 		int32_t i;
 		int32_t pos = 0;
 		uint16_t len = 0;
@@ -1313,12 +1319,12 @@ int32_t main(int32_t argc, char* argv[])
 		}
 		verbose = 1;
 	}
-	else if (argc == 2 && strlen(argv[1]) == 2 && strncmp(argv[1], "-v", 2) == 0)  // print version info
-	{
+	else if (argc == 2 && strlen(argv[1]) == 2 && strncmp(argv[1], "-v", 2) == 0)
+	{  // -v: print version info
 		printf("Version: %s  Date: %s\n", VERSION, DATE);
 	}
-	else if (argc >= 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-c", 2) == 0)  // create Fortis IRD
-	{
+	else if (argc >= 3 && strlen(argv[1]) == 2 && strncmp(argv[1], "-c", 2) == 0)
+	{  // -c: create standard Fortis IRD
 		int32_t i;
 		uint32_t resellerId;
 		uint32_t SWVersion;
@@ -1442,7 +1448,7 @@ int32_t main(int32_t argc, char* argv[])
 
 			if (type == 0x99)
 			{
-				printf("ERROR: Unknown suboption %s.\n", argv[3 + i]);
+				printf("ERROR: Unknown suboption %s.\n", argv[i]);
 				fclose(irdFile);
 				irdFile = fopen(argv[2], "rb");
 				if (irdFile != NULL)
@@ -1537,7 +1543,7 @@ int32_t main(int32_t argc, char* argv[])
 		temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
 		if (temp != headerDataBlockLen)
 		{
-			printf("Reading header failed.\n");
+			printf("ERROR: Reading back header failed (-c command).\n");
 			return -1;
 		}
 
@@ -1553,8 +1559,8 @@ int32_t main(int32_t argc, char* argv[])
 		}
 		verbose = 1;
 	}
-	else if (argc >= 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-ce", 3) == 0)  // Create Enigma2 IRD (for TDT Maxiboot loader, obsolete)
-	{
+	else if (argc >= 3 && strlen(argv[1]) == 3 && strncmp(argv[1], "-ce", 3) == 0)
+	{  // -ce: Create Enigma2 IRD (for TDT Maxiboot loader, also used for Neutrino)
 		int32_t i;
 		uint32_t resellerId;
 		uint32_t SWVersion;
@@ -1600,7 +1606,6 @@ int32_t main(int32_t argc, char* argv[])
 				oldsquash = 1;
 			}
 		}
-
 		appendPartCount = argc - verbose - oldsquash - 3;
 
 		if (appendPartCount == 0)
@@ -1614,7 +1619,6 @@ int32_t main(int32_t argc, char* argv[])
 		{
 			printf("Creating flash file %s\n", argv[2]);
 		}
-
 		for (i = 3; i < appendPartCount + 3 + verbose + oldsquash; i += 2)
 		{
 			type = 0x99;
@@ -1655,11 +1659,11 @@ int32_t main(int32_t argc, char* argv[])
 			{
 				type = 0x05;
 			}
-			else if (strlen(argv[i]) == 2 && (strncmp(argv[i], "-i", 2)) == 0)
+			else if (strlen(argv[i]) == 2 && strncmp(argv[i], "-i", 2) == 0)
 			{
 				type = 0x81;
 			}
-			else if (strlen(argv[i]) == 2 && (strncmp(argv[i], "-s", 2)) == 0)
+			else if (strlen(argv[i]) == 2 && strncmp(argv[i], "-s", 2) == 0)
 			{
 				type = 0x82;
 			}
@@ -1707,7 +1711,6 @@ int32_t main(int32_t argc, char* argv[])
 					{
 						resellerId = resellerId >> 16;
 					}
-
 					changeResellerID(irdFile, resellerId);
 				}
 			}
@@ -1744,48 +1747,48 @@ int32_t main(int32_t argc, char* argv[])
 				{
 					if (oldsquash == 1)
 					{
-						printVerbose("Adding signed dummy squashfs3.0 header");
-
 						// Check if the file dummy.squash30.signed.padded exists. If not, create it
 						file = fopen("dummy.squash30.signed.padded", "rb");
 						if (file == NULL)
 						{
 							printVerbose("\nSigned dummy squashfs 3.0 headerfile does not exist.\n");
-							printVerbose("Creating it...");
+							printVerbose("Creating it: ");
 
 							file = fopen("dummy.squash30.signed.padded", "w");
-							printProgress(".");
+							printProgress("o");
 
 							fwrite(dummy30, 1, dummy30_size, file);
-							printProgress(".");
+							printProgress("w");
 
 							fclose(file);
-							printProgress(".");
+							printProgress("c");
 
 							file = fopen("dummy.squash30.signed.padded", "rb");
-							printProgress(".");
+							printProgress(".\n");
 							if (file == NULL)
 							{
-								printf("\n\nERROR: Could not write signed dummy squashfs3.0 header file.\n");
+								printf("\nERROR: Could not write signed dummy squashfs3.0 header file.\n");
 								remove("dummy.squash30.signed.padded");
 								return -1;
 							}
 							else
 							{
-							printVerbose("\nCreating signed dummy squashfs3.0 header file successfully completed.\n");
+								printVerbose("Creating signed dummy squashfs3.0 header file successfully completed.\n\n");
 							}
 						}
+						printVerbose("Adding signed dummy squashfs3.0 header\n");
 					}
 					else  // new squashfs dummy
 					{
 						createDummy();  //  Create dummy squashfs header
-						printVerbose("Adding signed dummy squashfs header.");
+						printVerbose("Adding signed dummy squashfs header.\n");
 						file = fopen("dummy.squash.signed.padded", "rb");
 						printProgress(".");
 					}
 
 					if (file != NULL)
 					{
+						partBlockcount = totalBlockCount;
 						while (writeBlock(irdFile, file, 0, type) == DATA_BLOCK_SIZE)
 						{
 							printProgress(".");
@@ -1794,6 +1797,10 @@ int32_t main(int32_t argc, char* argv[])
 						totalBlockCount++;
 						fclose(file);
 // 						printVerbose("Dummy squashfs header written to output file.\n");
+ 						if (verbose)
+						{
+							printf("\nAdded %d blocks, total is now %d blocks.\n", totalBlockCount - partBlockcount, totalBlockCount);
+						}
 					}
 					else
 					{
@@ -1844,9 +1851,9 @@ int32_t main(int32_t argc, char* argv[])
 		// Read Header Data Block
 		fseek(irdFile, 0x04, SEEK_SET);
 		temp = fread(dataBuf, 1, headerDataBlockLen, irdFile);
-		if (temp)
+		if (temp != headerDataBlockLen)
 		{
-			printf("Reading header failed\n");
+			printf("ERROR: Reading back header failed (-ce command).\n");
 			return -1;
 		}
 
@@ -1882,8 +1889,8 @@ int32_t main(int32_t argc, char* argv[])
 		verbose = 1;
 	}
 	else if ((argc == 4 && strlen(argv[1]) == 2 && strncmp(argv[1], "-r", 2) == 0)
-	     ||  (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-rv", 3) == 0))  // Change reseller ID
-	{
+	     ||  (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-rv", 3) == 0))
+	{  // -r(v): Change reseller ID
 		uint32_t resellerId;
 		FILE *irdFile;
 
@@ -1910,15 +1917,15 @@ int32_t main(int32_t argc, char* argv[])
 		irdFile = fopen(argv[2], "r+");
 		if (irdFile == NULL)
 		{
-			printf("EROOR: cannot open IRD file %s.\n", argv[2]);
+			printf("ERROR: cannot open IRD file %s.\n", argv[2]);
 			return -1;
 		}
 		changeResellerID(irdFile, resellerId);
 		fclose(irdFile);
 	}
 	else if ((argc == 4 && strlen(argv[1]) == 2 && strncmp(argv[1], "-n", 2) == 0)
-	     ||  (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-nv", 3) == 0))  // Change SW version number
-	{
+	     ||  (argc == 4 && strlen(argv[1]) == 3 && strncmp(argv[1], "-nv", 3) == 0))
+	{  // -n(v): Change SW version number
 		uint32_t SWVersion;
 		FILE *irdFile;
 
@@ -1989,7 +1996,7 @@ int32_t main(int32_t argc, char* argv[])
 		printf("       -sv [unsigned.squashfs]       Sign squashfs part, verbose\n");
 		printf("       -t [signed.squashfs]          Test signed squashfs part\n");
 		printf("       -tv [signed.squashfs]         Test signed squashfs part, verbose\n");
-		printf("       -d                            Create squashfs dummy file\n");
+		printf("       -d                            Create squashfs3.3 dummy file\n");
 		printf("       -dv                           As -d, verbose\n");
 		printf("       -r [update.ird] [resellerID]  Change reseller id (e.g. 230300A0 for Atevio AV7500 L6.00)\n");
 		printf("       -rv [update.ird] [resellerID] As -r, verbose\n");
