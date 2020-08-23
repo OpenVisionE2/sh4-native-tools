@@ -1,26 +1,26 @@
 #ifndef __FUP_H__
 #define __FUP_H__
 
-#define MAX_PART_NUMBER  0x0a    // highest possible partition number (loader defines 0x10, with 0x0a-0x0f unused)
-#define EXTENSION_LEN    32      // maximum length of partition extension
+#define MAX_PART_NUMBER       0x0a    // highest possible partition number (loader defines 0x10, with 0x0a-0x0f unused)
+#define EXTENSION_LEN         32      // maximum length of partition extension
 
-#define PART_SIGN        1       // partition must be signed
-#define PART_FLASH       2       // partition is flashable
+#define PART_SIGN             1       // partition must be signed
+#define PART_FLASH            2       // partition is flashable
 
-#define USE_ZLIB         1       // do not undefine; HD models do not handle uncompressed format  
+#define USE_ZLIB              1       // do not undefine; HD models do not handle uncompressed format  
 
 #if defined(USE_ZLIB)
-#define VER_Xfd          0x0010
+#define VER_Xfd               0x0010
 #else
-#define VER_Xfd          0x0001
+#define VER_Xfd               0x0001
 #endif
 
-#define DATA_BUFFER_SIZE 0x2000
-#define DATA_BLOCK_SIZE  0x8000 - 6  // default block size (0x8000 - compressed length - block CRC16 - partition type)
-#define ERASE_SIZE       0x20000     // for 2nd generation with loader 6.XX
+#define DATA_BUFFER_SIZE      0x2000
+#define DATA_BLOCK_SIZE       0x8000 - 6  // default block size (0x8000 - compressed length - block CRC16 - partition type)
+#define ERASE_SIZE            0x20000     // for 2nd generation with loader 6.XX
 
 /* Default reseller ID */
-#define RESELLER_ID      0x230200a0  // Octagon SF 1028P HD Noblence L6.00
+#define RESELLER_ID           0x230200a0  // Octagon SF 1028P HD Noblence L6.00
 
 #define RESELLER_OFFSET_GEN1  0x00f0
 #define RESELLER_OFFSET_GEN2  0x0430
@@ -68,10 +68,10 @@ struct tPartition partData2a[] =
 	{ ".config4", "mtd5", "Config4", 0x01b40000, 0x00040000, "binary", (PART_FLASH) },
 	{ ".config8", "mtd5", "Config8", 0x01b80000, 0x00020000, "binary", (PART_FLASH) },
 	{ ".configA", "mtd5", "ConfigA", 0x01ba0000, 0x00020000, "binary", (PART_FLASH) },
-	{  ".kernel", "mtd1", "Kernel", 0x00100000, 0x00200000, "binary", (PART_FLASH) },
-	{     ".dev", "mtd4",    "Dev", 0x01800000, 0x00300000, "squash", (PART_FLASH | PART_SIGN) },
-	{  ".rootfs", "mtd3",   "Root", 0x00d00000, 0x00800000, "squash", (PART_FLASH | PART_SIGN) },
-	{    ".user", "mtd6",   "User", 0x01c00000, 0x00400000, "binary", (PART_FLASH) },
+	{  ".kernel", "mtd1",  "Kernel", 0x00100000, 0x00200000, "binary", (PART_FLASH) },
+	{     ".dev", "mtd4",     "Dev", 0x01800000, 0x00300000, "squash", (PART_FLASH | PART_SIGN) },
+	{  ".rootfs", "mtd3",    "Root", 0x00d00000, 0x00800000, "squash", (PART_FLASH | PART_SIGN) },
+	{    ".user", "mtd6",    "User", 0x01c00000, 0x00400000, "binary", (PART_FLASH) },
 };
 
 struct tPartition partData2b[] =
