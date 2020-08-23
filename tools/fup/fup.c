@@ -22,6 +22,14 @@
  *
  * + TODO: change loader reseller ID.
  *
+ * Changes in Version 1.9.7b:
+ * + Fix error in -i with generation 2
+ *
+ * Changes in Version 1.9.7a:
+ * + Fix error in -i with ird file containing loader
+ * + Fix error in -x (wrong output file names)
+ * + Fix two compiler warnings in Visual Studio
+ *
  * Changes in Version 1.9.7:
  * + Fix typo in error message
  * + Fix error in header read back in -ce command
@@ -124,11 +132,12 @@
 
 #include "fup.h"
 #include "crc16.h"
+//#include "crc32.h"  // part of zlib.h
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.7"
-#define DATE "18.07.2020"
+#define VERSION "1.9.7b"
+#define DATE "23.08.2020"
 
 // Global variables
 uint8_t verbose = 1;
@@ -142,6 +151,7 @@ uint8_t t_has[MAX_PART_NUMBER];
 uint32_t partcount;
 uint32_t loaderId;
 uint32_t loaderSW;
+uint32_t systemIDin;
 
 /* Functions */
 
@@ -213,7 +223,7 @@ int32_t getGeneration(int32_t resellerId)
 		case 0x23:  // HS8200
 		case 0x25:  // HS7110, HS7420, HS7810A
 		{
-			generation = 2;  // loader 6.XX
+			generation = 2;  // loader 5.XX or 6.XX
 			break;
 		}
 		case 0x27:  // HS7119, HS7429, HS7819
@@ -281,7 +291,7 @@ int32_t extractAndWrite(FILE *file, uint8_t *buffer, uint16_t len, uint16_t decL
 	{
 		// zlib
 		z_stream strm;
-		uint8_t out[decLen];
+		uint8_t out[DATA_BLOCK_SIZE + 6];
 
 		strm.zalloc = Z_NULL;
 		strm.zfree = Z_NULL;
@@ -545,9 +555,12 @@ char *getModelName(int32_t resellerId)
 	return (char *)fortisNames[i].reseller_name;
 }
 
-struct tPartition *getTableAddr(uint32_t generation, uint32_t resellerId)
+struct tPartition *getTableAddr(uint32_t resellerId)
 {
+	uint32_t generation;
 	struct tPartition *partTable = partData2d;  // default is HS8200 L6.00
+
+	generation = getGeneration(resellerId);
 
 	switch (generation)
 	{
@@ -636,10 +649,9 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 	uint8_t dataBuf[DATA_BLOCK_SIZE + 6];
 	uint16_t fpVersion;
 	uint32_t blockCount;
-	uint32_t systemId = RESELLER_ID;  // use default resellerID
+	uint32_t systemId = systemIDin;
 	uint16_t SWVersion1;
 	uint16_t SWVersion2;
-	uint16_t generation;
 	char *modelName;
 	struct tPartition *tableAddr = partData2d;  // default is HS8200 L6.00
 	uint16_t part_number = 0;
@@ -686,9 +698,7 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 			printf("  # of blocks     : %d (0x%0X) blocks\n", blockCount, blockCount);
 			printf("  SoftwareVersion : V%X.%02X.%02X\n", SWVersion1, SWVersion2 >> 8, SWVersion2 & 0xFF);
 		}
-
-		generation = getGeneration(systemId);
-		tableAddr = getTableAddr(generation, systemId);
+		systemIDin = systemId;
 	}
 	else
 	{  // not header block but normal partition block
@@ -697,9 +707,11 @@ int32_t readBlock(FILE *file, char *name, uint8_t firstBlock, uint8_t writeflag)
 			if (!has[type])
 			{
 				part_number++;
-				has[type] = part_number;
+				has[type] = (uint8_t)part_number;
 				ucLen[type] = 0;
 				column = 0;
+				tableAddr = getTableAddr(systemId);
+
 				if (verbose == 1)
 				{
 					printf("\nPartition found, type %02X -> %s (%s, %s", type, tableAddr[type].Description, tableAddr[type].Extension2, tableAddr[type].FStype);
@@ -927,6 +939,7 @@ int32_t main(int32_t argc, char* argv[])
 //		j = extract_2Bytes(dataBuffer, 0) >> 1;
 //		printf("  File size          : %d (Calculated from # of blocks)\n", ((i << 18) + j));
 //#endif
+		generation = getGeneration(resellerId);
 		fseek(irdFile, 0, SEEK_SET);
 		partcount = 0;
 		loaderFound = 0;
@@ -936,8 +949,12 @@ int32_t main(int32_t argc, char* argv[])
 		if (loaderFound == 2)
 		{
 			printf("Loader info:\n");
-			printf("  Loader reseller ID : 0x%08X\n", loaderId);
-			printf("  Loader version     : V%X.%02X.%02X\n", (loaderSW >> 16) & 0xff, (loaderSW >> 8) & 0xff, loaderSW & 0xff);
+			printf("  Loader reseller ID : 0x%08X", loaderId);
+			if (loaderId == resellerId)
+			{
+				printf(" (same model)");
+			}
+			printf("\n  Loader version     : V%X.%02X.%02X\n", (loaderSW >> 16) & 0xff, (loaderSW >> 8) & 0xff, loaderSW & 0xff);
 			if ((loaderId & 0xff00ff5f) != (resellerId & 0xff00ff5f))
 			{
 				printf("\nCAUTION: Loader is NOT compatible with hardware for resellerID %08X!\n", resellerId);
@@ -952,8 +969,7 @@ int32_t main(int32_t argc, char* argv[])
 				}
 			}
 		}
-		generation = getGeneration(resellerId);
-		tableAddr = getTableAddr(generation, resellerId);
+		tableAddr = getTableAddr(resellerId);
 
 		// Handle generation 2 (possible variable layout)
 		if ((generation == 2) && (resellerId & 0xf0) == 0xa0)
