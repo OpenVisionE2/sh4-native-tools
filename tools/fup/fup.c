@@ -22,6 +22,10 @@
  *
  * + TODO: change loader reseller ID.
  *
+ * Changes in Version 1.9.7c:
+ * + Fix formatting error in help text
+ * + Small corrections in model names
+ *
  * Changes in Version 1.9.7b:
  * + Fix error in -i with generation 2
  *
@@ -136,8 +140,8 @@
 #include "dummy30.h"
 #include "dummy31.h"
 
-#define VERSION "1.9.7b"
-#define DATE "23.08.2020"
+#define VERSION "1.9.7c"
+#define DATE "30.08.2020"
 
 // Global variables
 uint8_t verbose = 1;
@@ -928,16 +932,16 @@ int32_t main(int32_t argc, char* argv[])
 		printf("\nInformation on flash file %s\n\n", argv[2]);
 		printf("Header info:\n");
 		resellerId = getresellerID(irdFile);
-		printf("  Reseller ID        : 0x%08X\n", resellerId);
-		printf("  Reseller model     : %s\n", getModelName(resellerId));
+		printf("  Reseller ID      : 0x%08X\n", resellerId);
+		printf("  Reseller model   : %s\n", getModelName(resellerId));
 		SWVersion = getSWversion(irdFile);
-		printf("  Software version   : V%X.%02X.%02X\n", SWVersion >> 16, (SWVersion & 0x0000FF00) >> 8, SWVersion & 0xFF);
+		printf("  Software version : V%X.%02X.%02X\n", SWVersion >> 16, (SWVersion & 0x0000FF00) >> 8, SWVersion & 0xFF);
 		dataBuffer = getHeader(irdFile);
 		i = ((extract_2Bytes(dataBuffer, 6)) << 16) + extract_2Bytes(dataBuffer, 8);  // block count
-		printf("  Number of blocks   : %d (0x%04X)\n", i, i);
+		printf("  Number of blocks : %d (0x%04X)\n", i, i);
 //#if not defined USE_ZLIB
 //		j = extract_2Bytes(dataBuffer, 0) >> 1;
-//		printf("  File size          : %d (Calculated from # of blocks)\n", ((i << 18) + j));
+//		printf("  File size        : %d (Calculated from # of blocks)\n", ((i << 18) + j));
 //#endif
 		generation = getGeneration(resellerId);
 		fseek(irdFile, 0, SEEK_SET);
@@ -1967,58 +1971,59 @@ int32_t main(int32_t argc, char* argv[])
 	}
 	else // show usage
 	{
-		printf("\nfup - management program for Fortis .ird flash files");
-		printf("Version: %s  Date: %s\n", VERSION, DATE);
+		printf("\nfup - management program for Fortis .ird flash files\n");
+		printf("\nVersion: %s  Date: %s\n", VERSION, DATE);
 		printf("\n");
 		printf("Usage: %s -i|-x|-xv|-c|-ce|-s|-sv|-t|-tv|-d|-dv|-r|-rv|-n|-nv|-v []\n", argv[0]);
-		printf("       -i [update.ird]               Display detailed IRD information\n");
-		printf("       -x [update.ird]               Extract IRD\n");
-		printf("       -xv [update.ird]              As -x, verbose\n");
-		printf("       -c [update.ird] Options       Create Fortis IRD\n");
-		printf("         Suboptions for -c:   NOTE: lettered options only correct for 1G and 2G models)\n");
-		printf("          -ll [file.part]             Append Loader   (0) -> mtd0\n");
-		printf("          -k [file.part]              Append Kernel   (6) -> mtd1\n");
-		printf(" s        -a [file.part]              Append App      (1) -> mtd2\n");
-		printf(" s        -r [file.part]              Append Root     (8) -> mtd3\n");
-		printf(" s        -d [file.part]              Append Dev      (7) -> mdt4\n");
-		printf("          -c0 [file.part]             Append Config0  (2) -> mtd5, offset 0\n");
-		printf("          -c4 [file.part]             Append Config4  (3) -> mtd5, offset 0x40000\n");
-		printf("          -c8 [file.part]             Append Config8  (4) -> mtd5, offset 0x80000\n");
-		printf("          -ca [file.part]             Append ConfigA  (5) -> mtd5, offset 0xA0000\n");
-		printf("          -u [file.part]              Append User     (9) -> mtd6\n");
-		printf("          -i [resellerID]             Set resellerID\n");
-		printf("          -s [versionnr]              Set SW version\n");
-		printf("          -00 [file.part]             Append Type 0   (0) (alias for -ll)\n");
-		printf("          -1 [file.part]              Append Type 1   (1) (alias for -a)\n");
-		printf("          ...\n");
-		printf("          -9  [file.part]             Append Type 9   (9) (alias for -u)\n");
-		printf("          -v                          Verbose operation\n");
-		printf("       -ce [update.ird] Options      Create Enigma2 IRD (obsolete, models with TDT Maxiboot only)\n");
-		printf("         Subtions for -ce:\n");
-		printf("          -k|-6 [file.part]           Append Kernel   (6) -> mtd1\n");
-		printf("          -f|-1 [file.part]           Append FW       (1)\n");
-		printf("          -r|-9 [file.part]           Append Root     (9)\n");
-		printf("          -e|-8 [file.part]           Append Ext      (8)\n");
-		printf("          -g|-7 [file.part]           Append G        (7)\n");
-		printf("          -i  [resellerID]            Set resellerID to argument\n");
-		printf("          -s  [versionnr]             Set SW version\n");
-		printf("          -2  [file.part]             Append Config0  (2) -> mtd5, offset 0\n");
-		printf("          -3  [file.part]             Append Config4  (3) -> mtd5, offset 0x40000\n");
-		printf("          -4  [file.part]             Append Config8  (4) -> mtd5, offset 0x80000\n");
-		printf("          -5  [file.part]             Append ConfigA  (5) -> mtd5, offset 0xA0000\n");
-		printf("          -1G                         Use squashfs3.0 dummy\n");
-		printf("          -v                          Verbose operation\n");
-		printf("       -s [unsigned.squashfs]        Sign squashfs part\n");
-		printf("       -sv [unsigned.squashfs]       Sign squashfs part, verbose\n");
-		printf("       -t [signed.squashfs]          Test signed squashfs part\n");
-		printf("       -tv [signed.squashfs]         Test signed squashfs part, verbose\n");
-		printf("       -d                            Create squashfs3.3 dummy file\n");
-		printf("       -dv                           As -d, verbose\n");
-		printf("       -r [update.ird] [resellerID]  Change reseller id (e.g. 230300A0 for Atevio AV7500 L6.00)\n");
-		printf("       -rv [update.ird] [resellerID] As -r, verbose\n");
-		printf("       -n [update.ird] [versionnr]   Change SW version number\n");
-		printf("       -nv [update.ird] [versionnr]  As -n, verbose\n");
-		printf("       -v                            Display program version\n");
+		printf("  -i [update.ird]               Display detailed IRD information\n");
+		printf("  -x [update.ird]               Extract IRD into composing binaries\n");
+		printf("  -xv [update.ird]              As -x, verbose\n");
+		printf("  -c [update.ird] Options       Create Fortis IRD\n");
+		printf("     Suboptions for -c:   NOTE: lettered options and signing info\n");
+		printf("                                only correct for 1G and 2G models\n");
+		printf("     -ll [file.part]            Append Loader   (0) -> mtd0\n");
+		printf("     -k [file.part]             Append Kernel   (6) -> mtd1\n");
+		printf("     -a [file.part]             Append App      (1) -> mtd2 (must be signed)\n");
+		printf("     -r [file.part]             Append Root     (8) -> mtd3 (must be signed)\n");
+		printf("     -d [file.part]             Append Dev      (7) -> mdt4 (must be signed)\n");
+		printf("     -c0 [file.part]            Append Config0  (2) -> mtd5, offset 0\n");
+		printf("     -c4 [file.part]            Append Config4  (3) -> mtd5, offset 0x40000\n");
+		printf("     -c8 [file.part]            Append Config8  (4) -> mtd5, offset 0x80000\n");
+		printf("     -ca [file.part]            Append ConfigA  (5) -> mtd5, offset 0xA0000\n");
+		printf("     -u [file.part]             Append User     (9) -> mtd6\n");
+		printf("     -i [resellerID]            Set resellerID\n");
+		printf("     -s [versionnr]             Set SW version\n");
+		printf("     -00 [file.part]            Append Type 0   (0) (alias for -ll)\n");
+		printf("     -1 [file.part]             Append Type 1   (1) (alias for -a)\n");
+		printf("     ...\n");
+		printf("     -9  [file.part]            Append Type 9   (9) (alias for -u)\n");
+		printf("     -v                         Verbose operation\n");
+		printf("  -ce [update.ird] Options      Create Enigma2 IRD (obsolete, models with TDT Maxiboot only)\n");
+		printf("     Subtions for -ce:\n");
+		printf("     -k|-6 [file.part]          Append Kernel   (6) -> mtd1\n");
+		printf("     -f|-1 [file.part]          Append FW       (1)\n");
+		printf("     -r|-9 [file.part]          Append Root     (9)\n");
+		printf("     -e|-8 [file.part]          Append Ext      (8)\n");
+		printf("     -g|-7 [file.part]          Append G        (7)\n");
+		printf("     -i  [resellerID]           Set resellerID\n");
+		printf("     -s  [versionnr]            Set SW version\n");
+		printf("     -2  [file.part]            Append Config0  (2) -> mtd5, offset 0\n");
+		printf("     -3  [file.part]            Append Config4  (3) -> mtd5, offset 0x40000\n");
+		printf("     -4  [file.part]            Append Config8  (4) -> mtd5, offset 0x80000\n");
+		printf("     -5  [file.part]            Append ConfigA  (5) -> mtd5, offset 0xA0000\n");
+		printf("     -1G                        Use squashfs3.0 dummy\n");
+		printf("     -v                         Verbose operation\n");
+		printf("  -s [unsigned.squashfs]        Sign squashfs part\n");
+		printf("  -sv [unsigned.squashfs]       Sign squashfs part, verbose\n");
+		printf("  -t [signed.squashfs]          Test signed squashfs part\n");
+		printf("  -tv [signed.squashfs]         Test signed squashfs part, verbose\n");
+		printf("  -d                            Create squashfs3.3 dummy file\n");
+		printf("  -dv                           As -d, verbose\n");
+		printf("  -r [update.ird] [resellerID]  Change reseller id (e.g. 230300A0 for Atevio AV7500 L6.00)\n");
+		printf("  -rv [update.ird] [resellerID] As -r, verbose\n");
+		printf("  -n [update.ird] [versionnr]   Change SW version number\n");
+		printf("  -nv [update.ird] [versionnr]  As -n, verbose\n");
+		printf("  -v                            Display program version\n");
 		printf("\n");
 		printf("Note: To create squashfs part, use mksquashfs v3.3:\n");
 		printf("      ./mksquashfs3.3 squashfs-root flash.rootfs.own.mtd8 -nopad -le\n");
