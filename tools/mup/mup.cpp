@@ -20,17 +20,18 @@
 
 #define VERSION "1.4NdV"
 
-#define NOR_RAW 0
-#define NAND_RAW 1
-#define NAND_YAFFS2 2
+#define NOR_RAW           0
+#define NAND_RAW          1
+#define NAND_YAFFS2       2
 #define NAND_YAFFS2_ERASE 3
 
 bool verbose = true;
 
-void clear (FILE *fp)
+void clear(FILE *fp)
 {
 	char buf[255];
-	while (fgets (buf, 255, fp) != NULL && feof (fp))
+
+	while (fgets (buf, 255, fp) != NULL && feof(fp))
 	{
 		/* puts (buf); */
 	}
@@ -38,10 +39,10 @@ void clear (FILE *fp)
 
 int32_t main(int32_t argc, char* argv[])
 { 
-	FILE*    file;
-	int32_t  i, data_len;
-	uint8_t* buffer;
-	struct   stat buf;
+	FILE    *file;
+	int32_t i, data_len;
+	uint8_t *buffer;
+	struct  stat buf;
 
 	bool doInfo = false;
 	bool doVerify = false;
@@ -66,10 +67,12 @@ int32_t main(int32_t argc, char* argv[])
 	{
 		doXMLDetail = true;
 	}
+#if 0
 	else if (argc == 3 && strlen(argv[1]) == 3 && !strncmp(argv[1], "-e", 2))
 	{
 		doExtract = true;
 	}
+#endif
 	else if (argc == 3 && strlen(argv[1]) == 2 && !strncmp(argv[1], "-c", 2))
 	{
 		doCreate = true;
@@ -90,7 +93,9 @@ int32_t main(int32_t argc, char* argv[])
 		printf("For image verification:\n");
 		printf("  %s -v FILENAME\n", argv[0]);
 		printf("For image extraction:\n");
+#if 0
 		printf("  %s -e FILENAME\n", argv[0]);
+#endif
 		printf("For image generation:\n");
 		printf("  %s -c |-cs FILENAME\n", argv[0]);
 		exit(10);
@@ -111,19 +116,17 @@ int32_t main(int32_t argc, char* argv[])
 
 		if (file == NULL)
 		{
-		  fprintf(stderr, "Unable to open %s\n", argv[1]);
-		  return -3;
+			fprintf(stderr, "Unable to open %s\n", argv[1]);
+			return -3;
 		}
-
-		buffer = (uint8_t*) malloc(data_len);
+		buffer = (uint8_t*)malloc(data_len);
 
 		if (buffer == NULL)
 		{
 			fprintf(stderr, "Unable to get memory %d\n", data_len);
-			 return -4;
+			return -4;
 		}
-
-		i = fread( buffer, 1, data_len, file);
+		i = fread(buffer, 1, data_len, file);
 
 		//////////////////////////////////
 
@@ -152,13 +155,15 @@ int32_t main(int32_t argc, char* argv[])
 			swpack->printXML(doXMLDetail);
 			printf("</MARUSWUP>\n");
 		}
-		else if(doExtract)
+#if 0
+		else if (doExtract)
 		{
 			swpack->extract();
 		}
 		/* act of solidarity ;) */
-		free( buffer );
+		free(buffer);
 		fclose(file);
+#endif
 	}
 	else if (doCreate)
 	{
@@ -186,11 +191,11 @@ int32_t main(int32_t argc, char* argv[])
 		verboseprintf("Select ProductCode\n");
 		verboseprintf("1: 0x11321000 - Kathrein UFS-922\n");
 		verboseprintf("2: 0x11301003 - Kathrein UFS-912\n");
-		verboseprintf("3: 0x11301006 - Kathrein UFS-913\n");
+		verboseprintf("3: 0x11321006 - Kathrein UFS-913\n");
 		verboseprintf(":> ");
 		scanf("%d", &productCode);
 
-		switch(productCode)
+		switch (productCode)
 		{
 			case 1:
 			{
@@ -209,7 +214,6 @@ int32_t main(int32_t argc, char* argv[])
 				break;
 			}
 		}
-
 		swpack->setProductCode(productCode);
 
 		verboseprintf("Enter partitions. \"FLASHOFFSET, BLOCKSIZE, NAND, FILENAME;\"\n");

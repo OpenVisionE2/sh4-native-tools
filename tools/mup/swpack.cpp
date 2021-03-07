@@ -22,7 +22,7 @@ SwPack::SwPack()
 	<UpdateInfo value="UFS922 Test Software Update" />
 */
 
-	this->mHeader = (tSWPack *) malloc(sizeof(tSWPack));
+	this->mHeader = (tSWPack *)malloc(sizeof(tSWPack));
 	memcpy(this->mHeader->mMagicNumber, (uint8_t *) SW_MAGIC_VALUE, sizeof(SW_MAGIC_VALUE) <= sizeof(this->mHeader->mMagicNumber) ? sizeof(SW_MAGIC_VALUE) : sizeof(this->mHeader->mMagicNumber));
 	this->mHeader->mHeaderVersion   = 100;
 	//this->mHeader->mProductCode   = 0x11301003; // Kathrein, DVB-S2, simple, Ufs-912
@@ -35,7 +35,7 @@ SwPack::SwPack()
 	mCurInventoryOffset = 0;
 }
 
-SwPack::SwPack(uint8_t* data, uint32_t datalen)
+SwPack::SwPack(uint8_t *data, uint32_t datalen)
 {
 	mData = data;
 	mDataLength = datalen;
@@ -43,7 +43,7 @@ SwPack::SwPack(uint8_t* data, uint32_t datalen)
 
 void SwPack::parse()
 {
-	this->mHeader = (tSWPack*) mData;
+	this->mHeader = (tSWPack*)mData;
 
 	this->mChildDataOffset = SW_UPDATE_HEADER_SIZE /*sizeof(tSWPack)*/;
 	this->mChildDataLength = this->mDataLength - this->mChildDataOffset;
@@ -90,7 +90,6 @@ void SwPack::print()
 		printf("mInvalidateFlag = %d\n", this->mHeader->mInvalidateFlag);
 		printf("mUpdateInfo     = %s\n", vHelpStr);
 	}
-
 	strncpy(vHelpStr, this->mHeader->mUpdateInfo, SW_UPDATE_INFO_LENGTH);
 	vHelpStr[SW_UPDATE_INFO_LENGTH] = '\0';
 	if (verbose)
@@ -169,7 +168,7 @@ void SwPack::appendPartition(uint32_t flashOffset, char * filename, uint8_t * da
 	this->mInventoryCount++;
 }
 
-int32_t SwPack::createImage(uint8_t ** data)
+int32_t SwPack::createImage(uint8_t **data)
 {
 	/*int */mDataLength = SW_UPDATE_HEADER_SIZE + MAX_INVENTORY_COUNT * SW_INVENTORY_SIZE;
 	for (uint32_t i = 0; i < this->mInventoryCount; i++)

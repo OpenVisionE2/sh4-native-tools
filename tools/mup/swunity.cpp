@@ -33,21 +33,21 @@ SwUnity::SwUnity()
 	<UpdateInfo value="UFS922 Test Software Update - (Main Software) " />
 */
 
-	this->mHeader = (tSWUnity *) malloc(sizeof(tSWUnity));
-	memcpy(this->mHeader->mMagicNumber, (uint8_t *) SW_MAGIC_VALUE, sizeof(SW_MAGIC_VALUE) <= sizeof(this->mHeader->mMagicNumber) ? sizeof(SW_MAGIC_VALUE) : sizeof(this->mHeader->mMagicNumber));
+	this->mHeader = (tSWUnity *)malloc(sizeof(tSWUnity));
+	memcpy(this->mHeader->mMagicNumber, (uint8_t *)SW_MAGIC_VALUE, sizeof(SW_MAGIC_VALUE) <= sizeof(this->mHeader->mMagicNumber) ? sizeof(SW_MAGIC_VALUE) : sizeof(this->mHeader->mMagicNumber));
 
 	this->mHeader->mHeaderVersion   = 100;
 	//this->mHeader->mProductCode   = 0x11301003; // Kathrein, DVB-S2, simple, Ufs-912
 	this->mHeader->mProductCode     = 0x11321000; // Kathrein, DVB-S2, Twin-Pvr, Ufs-922
-	this->mHeader->mSWVersion       = 101; //uboot says that this should be 102 für 922, but it seems that this is not used anyway
+	this->mHeader->mSWVersion       = 101; //uboot says that this should be 102 for 922, but it seems that this is not used anyway
 	this->mHeader->mDate            = time(NULL);
 	this->mHeader->mFlashOffset     = 0;
 	this->mHeader->mDataLength      = 0;
 
-	memcpy(this->mHeader->mUpdateInfo, (uint8_t *) "Software Update", sizeof("Software Update") <= sizeof(this->mHeader->mUpdateInfo) ? sizeof("Software Update") : sizeof(this->mHeader->mUpdateInfo));
+	memcpy(this->mHeader->mUpdateInfo, (uint8_t *)"Software Update", sizeof("Software Update") <= sizeof(this->mHeader->mUpdateInfo) ? sizeof("Software Update") : sizeof(this->mHeader->mUpdateInfo));
 }
 
-SwUnity::SwUnity(uint8_t* data, uint32_t datalen)
+SwUnity::SwUnity(uint8_t *data, uint32_t datalen)
 {
 	mData = data;
 	mDataLength = datalen;
@@ -74,6 +74,30 @@ int32_t SwUnity::parse()
 void SwUnity::print()
 {
 	char vHelpStr[256];
+	const char *boxname;
+
+	switch (this->mHeader->mProductCode)
+	{
+		case 0x11321000:
+		{
+			boxname = "UFS922";
+			break;
+		}
+		case 0x11301003:
+		{
+			boxname = "UFS912";
+			break;
+		}
+		case 0x11321006:
+		{
+			boxname = "UFS913";
+			break;
+		}
+		default:
+		{
+			boxname = "Unknown";
+		}
+	}
 
 	printf("*******************************************************\n");
 	printf("SWUnity:\n\n");
@@ -83,7 +107,7 @@ void SwUnity::print()
 
 	printf("mMagicNumber    = %s\n", vHelpStr);
 	printf("mHeaderVersion  = %d\n", this->mHeader->mHeaderVersion);
-	printf("mProductCode    = %d\n", this->mHeader->mProductCode);
+	printf("mProductCode    = 0x%08X (%s)\n", this->mHeader->mProductCode, boxname);
 	printf("mSWVersion      = %d\n", this->mHeader->mSWVersion);
 	printf("mDate           = %d\n", (int)this->mHeader->mDate);
 	printf("mFlashOffset    = 0x%08X (%d)\n", this->mHeader->mFlashOffset, this->mHeader->mFlashOffset);
@@ -175,10 +199,10 @@ int32_t SwUnity::isValid()
 	return 1;
 }
 
-void SwUnity::calcSH1(uint8_t ** sh1_hash, uint32_t * sh1_hash_len)
+void SwUnity::calcSH1(uint8_t **sh1_hash, uint32_t *sh1_hash_len)
 {
 #if GCRY
-	/* let us see how int32_t is the hash key for SHA1 ... */
+	/* let us see how int32_t is the hash key for SHA1... */
 	*sh1_hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
 
 	*sh1_hash = (uint8_t *)malloc((*sh1_hash_len) * sizeof(uint8_t));
@@ -198,10 +222,10 @@ void SwUnity::calcSH1(uint8_t ** sh1_hash, uint32_t * sh1_hash_len)
 	return;
 }
 
-uint32_t SwUnity::calcCRC32(uint8_t ** crc32_hash, uint32_t * crc32_hash_len)
+uint32_t SwUnity::calcCRC32(uint8_t **crc32_hash, uint32_t *crc32_hash_len)
 {
 #if GCRY
-	/* let us see how int32_t is the hash key for CRC32 ... */
+	/* let us see how int32_t is the hash key for CRC32... */
 	*crc32_hash_len = gcry_md_get_algo_dlen( GCRY_MD_CRC32 );
 
 	*crc32_hash = (uint8_t *)malloc((*crc32_hash_len) * sizeof(uint8_t));
@@ -226,7 +250,7 @@ uint32_t SwUnity::calcCRC32(uint8_t ** crc32_hash, uint32_t * crc32_hash_len)
 				printf("%02X ", this->mChildData[this->mChildDataLength - 41 + i]);
 			}
 			printf("\n");
-	}
+		}
 	}
 	return crc32(this->mChildData, this->mChildDataLength);
 }
@@ -261,7 +285,7 @@ bool SwUnity::verify()
 	{
 		sh1 = true;
 	}
-	uint8_t * crc32HashArray = NULL;
+	uint8_t *crc32HashArray = NULL;
 	uint32_t crc32Hash = 0;
 	uint32_t crc32HashLength = 0;
 	crc32Hash = calcCRC32(&crc32HashArray, &crc32HashLength);
@@ -300,7 +324,7 @@ void SwUnity::extract()
 			vHelpStr[i] = '_';
 		}
 	}
-	fd = open(vHelpStr, O_WRONLY | O_CREAT,S_IRUSR|S_IWUSR);
+	fd = open(vHelpStr, O_WRONLY | O_CREAT);
 	if (fd < 0)
 	{
 		printf("error opening %s\n", vHelpStr);
@@ -328,7 +352,7 @@ void SwUnity::setPartition(uint32_t flashOffset, char* filename, uint8_t * data,
 	this->mChildData = (uint8_t *)malloc(dataLength);
 	memcpy(this->mChildData, data, dataLength);
 
-	uint8_t * sh1HashArray = NULL;
+	uint8_t *sh1HashArray = NULL;
 	uint32_t sh1HashLength = 0;
 	calcSH1(&sh1HashArray, &sh1HashLength);
 	for (int32_t i = 0; i < 20; i++)
@@ -346,7 +370,7 @@ void SwUnity::setPartition(uint32_t flashOffset, char* filename, uint8_t * data,
 
 uint32_t SwUnity::getData(uint8_t ** data)
 {
-	if(data != NULL)
+	if (data != NULL)
 	{
 		memcpy(*data, this->mData, this->mDataLength);
 	}

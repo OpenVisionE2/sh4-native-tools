@@ -8,7 +8,7 @@ class SwUnity
 {
 public:
 	SwUnity();
-	SwUnity(uint8_t* data, uint32_t datalen);
+	SwUnity(uint8_t *data, uint32_t datalen);
 	void            print();
 	void            printXML(bool d);
 	int             parse();
@@ -21,11 +21,11 @@ public:
 	{
 		this->mHeader->mProductCode = code;
 	}
-	void            setPartition(uint32_t flashOffset, char* filename, uint8_t * data, uint32_t dataLength);
-	uint32_t        getData(uint8_t ** data);
+	void            setPartition(uint32_t flashOffset, char *filename, uint8_t *data, uint32_t dataLength);
+	uint32_t        getData(uint8_t **data);
 private:
-	void            calcSH1(uint8_t ** sh1_hash, uint32_t * sh1_hash_len);
-	uint32_t        calcCRC32(uint8_t ** crc32_hash, uint32_t * crc32_hash_len);
+	void            calcSH1(uint8_t **sh1_hash, uint32_t *sh1_hash_len);
+	uint32_t        calcCRC32(uint8_t **crc32_hash, uint32_t *crc32_hash_len);
 
 private:
 	typedef struct sSWUnity
